@@ -97,6 +97,5 @@ downloads/
 # Claude
 .claude/
 
-# Firefox Profile - Exclude machine-specific files only
+# Firefox Profile
 firefox_profile/
-!firefox_profile/containers.json
