@@ -44,7 +44,7 @@ class BaseScraper:
             self.context = await self.playwright.firefox.launch_persistent_context(
                 user_data_dir="./web_automation/firefox_profile",
                 headless=self.headless,
-                viewport={'width': 1920, 'height': 1080},
+                viewport={'width': 1024, 'height': 600},
                 user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
                 accept_downloads=True,
                 ignore_https_errors=True
