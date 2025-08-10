@@ -45,16 +45,10 @@ Monumator/
 
 ## 🛠️ Installation
 
-### Prerequisites
-- Python 3.8+
-- Firefox browser
-- Excel
-- VPN access to SQL Server databases
-
 ### Setup
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Claudesaul/Monumator
    cd Monumator
    ```
 
