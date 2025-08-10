@@ -98,27 +98,5 @@ downloads/
 .claude/
 
 # Firefox Profile - Exclude machine-specific files only
-web_automation/firefox_profile/cache2/
-web_automation/firefox_profile/storage/
-web_automation/firefox_profile/startupCache/
-web_automation/firefox_profile/shader-cache/
-web_automation/firefox_profile/thumbnails/
-web_automation/firefox_profile/datareporting/
-web_automation/firefox_profile/safebrowsing/
-web_automation/firefox_profile/security_state/
-web_automation/firefox_profile/sessionstore*
-web_automation/firefox_profile/bookmarkbackups/
-web_automation/firefox_profile/*.sqlite-shm
-web_automation/firefox_profile/*.sqlite-wal
-web_automation/firefox_profile/*.lock
-web_automation/firefox_profile/compatibility.ini
-web_automation/firefox_profile/times.json
-web_automation/firefox_profile/Telemetry.ShutdownTime.txt
-
-# But include essential Firefox settings and extensions
-!web_automation/firefox_profile/prefs.js
-!web_automation/firefox_profile/extensions/
-!web_automation/firefox_profile/extensions.json
-!web_automation/firefox_profile/extension-preferences.json
-!web_automation/firefox_profile/handlers.json
-!web_automation/firefox_profile/containers.json
+firefox_profile/
+!firefox_profile/containers.json

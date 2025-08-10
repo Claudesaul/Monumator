@@ -1,6 +1,6 @@
 # configure_browser.py
 import asyncio
-from .base_scraper import BaseScraper
+from base_scraper import BaseScraper
 
 async def configure_browser():
     scraper = BaseScraper(headless=False)
