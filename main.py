@@ -21,6 +21,25 @@ def show_download_directories():
         status = "✅" if os.path.exists(path) else "❌"
         print(f"{status} {name.upper()}: {path}")
 
+async def test_scraper_login():
+    """Test SEED login functionality - silent test"""
+    try:
+        import io
+        from contextlib import redirect_stdout, redirect_stderr
+        from web_automation.base_scraper import BaseScraper
+        from web_automation.seed_browser import SeedBrowser
+        
+        # Suppress all output during test
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            scraper = BaseScraper(headless=True)
+            await scraper.setup_browser()
+            seed = SeedBrowser(scraper.page)
+            result = await seed.login()
+            await scraper.cleanup_browser()
+            return result
+    except:
+        return False
+
 def system_status():
     """Quick system status check"""
     print("\n🔍 SYSTEM STATUS")
@@ -37,19 +56,19 @@ def system_status():
     except:
         print("⚠️ Database: Cannot test")
     
-    # Template check
-    print("🔍 Checking templates...")
+    # Scraper check
+    print("🔍 Testing web scraper...")
     try:
-        from excel_processing.stockout_excel import get_stockout_template_info
-        template_info = get_stockout_template_info()
-        if template_info['exists']:
-            print("✅ Templates: Available")
+        import asyncio
+        result = asyncio.run(test_scraper_login())
+        if result:
+            print("✅ Web scraper: Working successfully")
         else:
-            print("❌ Templates: Missing")
+            print("❌ Web scraper: Login failed")
     except:
-        print("⚠️ Templates: Cannot check")
+        print("⚠️ Web scraper: Cannot test")
     
-    print("✅ System check complete - All systems online")
+    print("✅ System check complete - All systems tested")
 
 def main():
     """Main application entry point"""

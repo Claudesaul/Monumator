@@ -11,7 +11,7 @@ import time
 from datetime import datetime
 from config.report_config import SEED_REPORTS
 from utils.downloader import download_seed_report
-from excel_processing.inventory_excel import InventoryExcelProcessor, get_inventory_template_info
+from excel_processing.inventory_excel import InventoryExcelProcessor
 from web_automation.product_scraper import download_product_list_with_browser
 import pandas as pd
 
@@ -44,22 +44,16 @@ def validate_inventory_prerequisites():
     print("🔍 Validating inventory adjustment prerequisites...")
     
     validation_results = {
-        'template_exists': False,
         'temp_directory': True,  # We can create this
         'all_valid': False
     }
-    
-    # Check template
-    template_info = get_inventory_template_info()
-    validation_results['template_exists'] = template_info['exists']
-    validation_results['template_info'] = template_info
     
     # Ensure temp directory
     temp_dir = "downloads/temp"
     os.makedirs(temp_dir, exist_ok=True)
     
     # Overall validation
-    validation_results['all_valid'] = validation_results['template_exists']
+    validation_results['all_valid'] = validation_results['temp_directory']
     
     if validation_results['all_valid']:
         print("✅ Inventory adjustment prerequisites validated")
@@ -304,7 +298,6 @@ def get_inventory_adjustment_status():
     
     status = {
         'ready_for_processing': validation['all_valid'],
-        'template': validation['template_info'],
         'report_id': report_id,
         'description': description,
         'current_date': datetime.now().strftime('%Y-%m-%d'),

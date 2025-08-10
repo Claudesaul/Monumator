@@ -1,15 +1,13 @@
-# Config Module
+# ⚙️ Config Module
 
-Contains configuration settings for SEED API reports and database connections.
+Configuration files for SEED API reports and database connections.
 
-## Files
+## 📄 Files
 
 - **`report_config.py`** - SEED report IDs, download paths, API settings
-- **`database_config.py`** - Database connection settings
+- **`database_config.py`** - SQL Server connection strings and database utilities
 
-## How It Works
-
-Centralizes all settings in one place. Import configurations directly:
+## 🚀 Usage
 
 ```python
 from config.report_config import SEED_REPORTS
@@ -30,7 +28,7 @@ from config.database_config import get_lightspeed_connection
 conn = get_lightspeed_connection()
 ```
 
-## Adding New Configuration
+## ➕ Adding New Configuration
 
 ### New SEED Report
 Edit `report_config.py`:
@@ -44,21 +42,20 @@ SEED_REPORTS = {
 ### New Database Connection
 Edit `database_config.py`:
 ```python
-NEW_DB_CONNECTION = {
-    "dsn": "NewDB",
-    "uid": "User", 
-    "pwd": "Password",
-    "database": "DatabaseName"
+NEW_CONNECTION = {
+    "connection_string": f"DRIVER={{SQL Server}};SERVER=server;DATABASE=db;UID={DB_USERNAME};PWD={DB_PASSWORD}"
 }
 
-def get_new_db_connection():
-    return get_database_connection_by_config(NEW_DB_CONNECTION)
+def get_new_connection():
+    return get_database_connection("new_type")
 ```
 
-## Environment Variables
+## 🔑 Environment Variables
 
 Create `.env` file for sensitive data:
 ```bash
 SEED_USERNAME=your_username
 SEED_PASSWORD=your_password
+DB_USERNAME=your_db_username
+DB_PASSWORD=your_db_password
 ```

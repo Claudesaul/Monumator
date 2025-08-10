@@ -1,19 +1,19 @@
-# Utils Module
+# 🛠️ Utils Module
 
 Contains utility functions used throughout the Monumator system.
 
-## Files
+## 📄 Files
 
 - **`downloader.py`** - SEED API downloads with concurrent support
 - **`menu_navigator.py`** - Arrow-key menu navigation
 
-## How It Works
+## ⚙️ How It Works
 
 Provides reusable utility functions:
 - **Downloader** - SEED API authentication and concurrent downloads
 - **Menu Navigator** - Console arrow-key navigation for menus
 
-## Usage
+## 🚀 Usage
 
 ### Single Report Download
 ```python
@@ -56,7 +56,7 @@ from utils.downloader import get_seed_credentials
 username, password = get_seed_credentials()  # From .env file
 ```
 
-## Adding New Utility Functions
+## ➕ Adding New Utility Functions
 
 ### Step 1: Add to Appropriate File
 Add to `downloader.py` for download/API utilities:
@@ -99,7 +99,7 @@ result = new_download_utility("param1", "param2")
 new_ui_utility()
 ```
 
-## Core Functions
+## 🔧 Core Functions
 
 ### downloader.py
 - **`download_seed_report()`** - Single report download
@@ -112,7 +112,7 @@ new_ui_utility()
 - **`display()`** - Show menu with highlighting
 - **`navigate()`** - Handle ↑↓ arrows, Enter, Q
 
-## Environment Variables
+## 🔑 Environment Variables
 
 Required in `.env` file:
 ```bash
@@ -120,7 +120,7 @@ SEED_USERNAME=your_username
 SEED_PASSWORD=your_password
 ```
 
-## Concurrent Processing Pattern
+## ⚡ Concurrent Processing Pattern
 
 For adding new concurrent utilities:
 ```python

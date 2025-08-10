@@ -25,19 +25,6 @@ class ExcelProcessorBase:
         self.template_path = template_path
         self.output_path = None
         
-    def validate_template_exists(self):
-        """
-        Check if the template file exists
-        
-        Returns:
-            bool: True if template exists, False otherwise
-        """
-        if not os.path.exists(self.template_path):
-            print(f"❌ Template file not found: {self.template_path}")
-            print("📁 Please ensure the template file is placed in the templates/ directory")
-            return False
-        print(f"✅ Template file found: {self.template_path}")
-        return True
     
     def create_working_copy(self, output_directory, filename_prefix):
         """
@@ -50,9 +37,6 @@ class ExcelProcessorBase:
         Returns:
             str: Path to the working copy file
         """
-        if not self.validate_template_exists():
-            raise FileNotFoundError(f"Template file not found: {self.template_path}")
-        
         # Ensure output directory exists
         os.makedirs(output_directory, exist_ok=True)
         
@@ -67,30 +51,6 @@ class ExcelProcessorBase:
         print(f"📄 Created working copy: {self.output_path}")
         
         return self.output_path
-    
-    def get_template_info(self):
-        """
-        Get template file information
-        
-        Returns:
-            dict: Template file information
-        """
-        template_info = {
-            'exists': False,
-            'path': self.template_path,
-            'size': 0,
-            'modified': 'Unknown'
-        }
-        
-        if os.path.exists(self.template_path):
-            template_info['exists'] = True
-            template_info['size'] = os.path.getsize(self.template_path)
-            
-            # Get modification time
-            mod_time = os.path.getmtime(self.template_path)
-            template_info['modified'] = datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S')
-        
-        return template_info
     
     def cleanup_temp_files(self, *file_paths):
         """

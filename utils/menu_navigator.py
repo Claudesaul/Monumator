@@ -39,15 +39,18 @@ class MenuNavigator:
             
             key = msvcrt.getch()
             
-            if key == b'\xe0':  # Arrow key prefix
-                key = msvcrt.getch()
-                if key == b'H':  # Up arrow
+            # Check for arrow keys (two-byte sequence)
+            if key in [b'\xe0', b'\x00']:  # Arrow key prefixes
+                key2 = msvcrt.getch()
+                if key2 == b'H':  # Up arrow
                     self.selected = (self.selected - 1) % len(self.options)
-                elif key == b'P':  # Down arrow
+                elif key2 == b'P':  # Down arrow
                     self.selected = (self.selected + 1) % len(self.options)
             
-            elif key in [b'\r', b'\n']:  # Enter key
+            # Enter key
+            elif key in [b'\r', b'\n']:
                 return self.selected
             
-            elif key.lower() == b'q':  # Quit
+            # Quit options
+            elif key.lower() == b'q':
                 return -1

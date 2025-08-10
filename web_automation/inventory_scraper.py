@@ -1,33 +1,34 @@
 """
-Inventory Confirmation Scraper
-==============================
+Inventory Confirmation Scraper - Playwright Edition
+===================================================
 
-Scrapes inventory confirmation data from SEED routes summary.
+Async inventory confirmation scraping with Playwright and Firefox.
 Extracts route data and generates Excel reports.
 """
 
 import os
-import time
+import asyncio
 from datetime import datetime, timedelta
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import StaleElementReferenceException, NoSuchElementException
+from typing import List, Dict, Any, Optional
 import pandas as pd
+from playwright.async_api import Page, ElementHandle
+from playwright.async_api import TimeoutError as PlaywrightTimeout
 from .base_scraper import BaseScraper
 from .seed_browser import SeedBrowser
 from excel_processing.base_excel import ensure_directory_exists
 
 class InventoryConfirmationScraper(BaseScraper):
     """
-    Scrapes inventory confirmation data from SEED
+    Async scraper for inventory confirmation data from SEED
     """
     
-    def __init__(self, headless=True):
+    def __init__(self, headless: bool = True):
         """Initialize inventory confirmation scraper"""
         super().__init__(headless)
-        self.seed_browser = None
+        self.seed_browser: Optional[SeedBrowser] = None
         self.target_routes = ["Rt 102", "Rt 106", "Rt 206", "Rt 305"]
         
-    def get_previous_business_day(self):
+    def get_previous_business_day(self) -> str:
         """
         Calculate the target date for inventory confirmation
         Monday = Friday (3 days ago), other days = previous day
@@ -46,12 +47,12 @@ class InventoryConfirmationScraper(BaseScraper):
         
         return target_date.strftime("%Y-%m-%d")
     
-    def find_routes_with_missing_inventory(self):
+    async def find_routes_with_missing_inventory(self) -> List[str]:
         """
         Find routes that have missing inventory (red indicators)
         
         Returns:
-            list: List of route names with missing inventory
+            List of route names with missing inventory
         """
         missing_routes = []
         
@@ -59,20 +60,20 @@ class InventoryConfirmationScraper(BaseScraper):
             print("🔍 Scanning for routes with missing inventory...")
             
             # Look for all route links
-            route_links = self.driver.find_elements(By.XPATH, "//a[contains(@href, 'RouteDetails')]")
+            route_links = await self.page.locator("a[href*='RouteDetails']").all()
             
             for link in route_links:
                 try:
-                    route_text = link.text.strip()
+                    route_text = (await link.text_content() or "").strip()
                     
                     # Check if this is one of our target routes
                     if any(target in route_text for target in self.target_routes):
-                        # Look for red indicator (missing inventory)
-                        parent_row = link.find_element(By.XPATH, "./ancestor::tr")
+                        # Look for red indicator (missing inventory) in parent row
+                        parent_row = link.locator("xpath=ancestor::tr").first
                         
-                        # Check for red background or other missing inventory indicators
-                        style = parent_row.get_attribute("style") or ""
-                        class_name = parent_row.get_attribute("class") or ""
+                        # Check for red background or missing inventory indicators
+                        style = await parent_row.get_attribute("style") or ""
+                        class_name = await parent_row.get_attribute("class") or ""
                         
                         if "red" in style.lower() or "missing" in class_name.lower():
                             missing_routes.append(route_text)
@@ -80,7 +81,7 @@ class InventoryConfirmationScraper(BaseScraper):
                         else:
                             print(f"✅ Route complete: {route_text}")
                             
-                except (StaleElementReferenceException, NoSuchElementException) as e:
+                except Exception as e:
                     print(f"⚠️ Error checking route: {str(e)}")
                     continue
                     
@@ -90,21 +91,21 @@ class InventoryConfirmationScraper(BaseScraper):
         print(f"📊 Found {len(missing_routes)} routes with missing inventory")
         return missing_routes
     
-    def scrape_route_data(self, target_date):
+    async def scrape_route_data(self, target_date: str) -> List[Dict[str, Any]]:
         """
         Scrape data for all target routes
         
         Args:
-            target_date (str): Date in YYYY-MM-DD format
+            target_date: Date in YYYY-MM-DD format
             
         Returns:
-            list: List of route data dictionaries
+            List of route data dictionaries
         """
         route_data = []
         
         try:
             # Find routes with missing inventory
-            missing_routes = self.find_routes_with_missing_inventory()
+            missing_routes = await self.find_routes_with_missing_inventory()
             
             # Process each target route
             for route in self.target_routes:
@@ -120,21 +121,22 @@ class InventoryConfirmationScraper(BaseScraper):
                 
                 # Try to navigate to route details
                 try:
-                    route_link = self.driver.find_element(By.XPATH, f"//a[contains(text(), '{route}')]")
-                    route_link.click()
-                    time.sleep(3)
+                    # Find and click route link
+                    route_link = self.page.locator(f"a:has-text('{route}')").first
+                    await route_link.click()
+                    await self.page.wait_for_load_state('networkidle')
                     
                     # Extract asset data if on route details page
-                    if "RouteDetails" in self.driver.current_url:
-                        assets = self.extract_asset_data()
+                    if "RouteDetails" in self.page.url:
+                        assets = await self.extract_asset_data()
                         route_info['assets_processed'] = len(assets)
                         route_info['missing_items'] = self.find_missing_items(assets)
                         
                         print(f"📊 {route}: {len(assets)} assets, {len(route_info['missing_items'])} missing items")
                     
                     # Navigate back to summary
-                    self.driver.back()
-                    time.sleep(2)
+                    await self.page.go_back()
+                    await self.page.wait_for_load_state('networkidle')
                     
                 except Exception as e:
                     print(f"⚠️ Could not process {route}: {str(e)}")
@@ -147,27 +149,33 @@ class InventoryConfirmationScraper(BaseScraper):
         
         return route_data
     
-    def extract_asset_data(self):
+    async def extract_asset_data(self) -> List[Dict[str, str]]:
         """
         Extract asset data from current route details page
         
         Returns:
-            list: List of asset data dictionaries
+            List of asset data dictionaries
         """
         assets = []
         
         try:
-            # Look for asset table
-            asset_rows = self.driver.find_elements(By.XPATH, "//table//tr[position()>1]")
+            # Wait for table to load
+            await self.page.wait_for_selector("table", timeout=5000)
             
-            for row in asset_rows:
+            # Look for asset table rows (skip header)
+            rows = await self.page.locator("table tr").all()
+            
+            for i, row in enumerate(rows):
+                if i == 0:  # Skip header row
+                    continue
+                    
                 try:
-                    cells = row.find_elements(By.TAG_NAME, "td")
+                    cells = await row.locator("td").all()
                     if len(cells) >= 3:
                         asset_data = {
-                            'asset_id': cells[0].text.strip(),
-                            'location': cells[1].text.strip(),
-                            'status': cells[2].text.strip()
+                            'asset_id': (await cells[0].text_content() or "").strip(),
+                            'location': (await cells[1].text_content() or "").strip(),
+                            'status': (await cells[2].text_content() or "").strip()
                         }
                         
                         # Filter out certain asset types
@@ -176,23 +184,25 @@ class InventoryConfirmationScraper(BaseScraper):
                             assets.append(asset_data)
                             
                 except Exception as e:
-                    print(f"⚠️ Error extracting asset data: {str(e)}")
+                    print(f"⚠️ Error extracting asset row: {str(e)}")
                     continue
                     
+        except PlaywrightTimeout:
+            print("⚠️ No asset table found on page")
         except Exception as e:
             print(f"❌ Error extracting asset data: {str(e)}")
         
         return assets
     
-    def find_missing_items(self, assets):
+    def find_missing_items(self, assets: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """
         Identify missing items from asset data
         
         Args:
-            assets (list): List of asset data
+            assets: List of asset data
             
         Returns:
-            list: List of missing items
+            List of missing items
         """
         missing_items = []
         
@@ -205,16 +215,16 @@ class InventoryConfirmationScraper(BaseScraper):
         
         return missing_items
     
-    def generate_excel_report(self, route_data, output_directory="downloads/daily"):
+    def generate_excel_report(self, route_data: List[Dict], output_directory: str = "downloads/daily") -> str:
         """
         Generate Excel report from route data
         
         Args:
-            route_data (list): List of route data dictionaries
-            output_directory (str): Directory to save report
+            route_data: List of route data dictionaries
+            output_directory: Directory to save report
             
         Returns:
-            str: Path to generated Excel file
+            Path to generated Excel file
         """
         try:
             # Ensure output directory exists
@@ -239,35 +249,36 @@ class InventoryConfirmationScraper(BaseScraper):
             print(f"❌ Failed to generate Excel report: {str(e)}")
             raise
     
-    def run_inventory_confirmation_scraper(self):
+    async def run_inventory_confirmation_scraper(self) -> Dict[str, Any]:
         """
-        Complete workflow for inventory confirmation scraping
+        Complete async workflow for inventory confirmation scraping
         
         Returns:
-            dict: Results dictionary with success status and details
+            Results dictionary with success status and details
         """
+        import time
         start_time = time.time()
         
         try:
             print("🚀 Starting inventory confirmation scraper...")
             
             # Setup browser and SEED connection
-            self.setup_browser()
-            self.seed_browser = SeedBrowser(self.driver)
+            await self.setup_browser()
+            self.seed_browser = SeedBrowser(self.page)
             
             # Login to SEED
-            if not self.seed_browser.login():
+            if not await self.seed_browser.login():
                 raise Exception("Failed to login to SEED")
             
             # Calculate target date
             target_date = self.get_previous_business_day()
             
             # Navigate to routes summary
-            if not self.seed_browser.navigate_to_route_summary(target_date):
+            if not await self.seed_browser.navigate_to_route_summary(target_date):
                 raise Exception("Failed to navigate to routes summary")
             
             # Scrape route data
-            route_data = self.scrape_route_data(target_date)
+            route_data = await self.scrape_route_data(target_date)
             
             if not route_data:
                 raise Exception("No route data found")
@@ -300,18 +311,31 @@ class InventoryConfirmationScraper(BaseScraper):
                 'elapsed_time': time.time() - start_time
             }
         finally:
-            self.cleanup_browser()
+            await self.cleanup_browser()
 
-# Convenience function for backward compatibility
-def run_inventory_confirmation_scraper(headless=True):
+# Async wrapper function for backward compatibility
+async def run_inventory_confirmation_scraper_async(headless: bool = True) -> Dict[str, Any]:
     """
-    Run inventory confirmation scraper (backward compatibility function)
+    Run inventory confirmation scraper asynchronously
     
     Args:
-        headless (bool): Run in headless mode
+        headless: Run in headless mode
         
     Returns:
-        dict: Results dictionary
+        Results dictionary
     """
     scraper = InventoryConfirmationScraper(headless=headless)
-    return scraper.run_inventory_confirmation_scraper()
+    return await scraper.run_inventory_confirmation_scraper()
+
+# Synchronous wrapper for menu system integration
+def run_inventory_confirmation_scraper(headless: bool = True) -> Dict[str, Any]:
+    """
+    Run inventory confirmation scraper (synchronous wrapper)
+    
+    Args:
+        headless: Run in headless mode
+        
+    Returns:
+        Results dictionary
+    """
+    return asyncio.run(run_inventory_confirmation_scraper_async(headless))

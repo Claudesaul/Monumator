@@ -30,7 +30,7 @@ LIGHTSPEED_CONNECTION = {
     "uid": DB_USERNAME, 
     "pwd": DB_PASSWORD,
     "database": "LightSpeed",
-    "connection_string": f"DSN=Lightspeed;UID={DB_USERNAME};PWD={DB_PASSWORD};DATABASE=LightSpeed"
+    "connection_string": f"DRIVER={{SQL Server}};SERVER=10.216.207.32;DATABASE=LightSpeed;UID={DB_USERNAME};PWD={DB_PASSWORD}"
 }
 
 LEVEL_CONNECTION = {
@@ -38,7 +38,7 @@ LEVEL_CONNECTION = {
     "uid": DB_USERNAME,
     "pwd": DB_PASSWORD,
     "database": "Level",
-    "connection_string": f"DSN=Lightspeed;UID={DB_USERNAME};PWD={DB_PASSWORD};DATABASE=Level"
+    "connection_string": f"DRIVER={{SQL Server}};SERVER=10.216.207.32;DATABASE=Level;UID={DB_USERNAME};PWD={DB_PASSWORD}"
 }
 
 # Database query timeout settings

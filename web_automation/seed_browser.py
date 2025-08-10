@@ -1,33 +1,30 @@
 """
-SEED Browser Management
-======================
+SEED Browser Management - Playwright Edition
+============================================
 
-Handles SEED login and common navigation functionality.
+Async SEED login and navigation with Playwright and Firefox.
 Provides reusable SEED-specific browser operations.
 """
 
 import os
-import time
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from playwright.async_api import Page
+from playwright.async_api import TimeoutError as PlaywrightTimeout
 from dotenv import load_dotenv
 
 class SeedBrowser:
     """
-    Manages SEED-specific browser operations
+    Manages SEED-specific browser operations with async Playwright
     """
     
-    def __init__(self, driver):
+    def __init__(self, page: Page):
         """
         Initialize SEED browser manager
         
         Args:
-            driver: Selenium WebDriver instance
+            page: Playwright Page instance
         """
-        self.driver = driver
-        self.wait = WebDriverWait(driver, 10)
+        self.page = page
+        self.base_url = "https://mycantaloupe.com"
         
         # Load environment variables
         load_dotenv()
@@ -37,86 +34,51 @@ class SeedBrowser:
         if not self.username or not self.password:
             raise ValueError("SEED_USERNAME and SEED_PASSWORD must be set in environment variables")
     
-    def login(self):
+    async def login(self) -> bool:
         """
         Perform SEED login process
         
         Returns:
-            bool: True if login successful, False otherwise
+            bool: True if login successful
         """
         try:
-            print("🔑 Logging into SEED...")
-            
             # Navigate to SEED
-            self.driver.get("https://mycantaloupe.com")
+            await self.page.goto(self.base_url)
             
-            # Check if already logged in by looking for login form
-            try:
-                # Wait for login form to appear
-                password_field = self.wait.until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "testPasswordInput"))
-                )
-                
-                # If we found the password field, we need to login
-                print("📝 Login form detected, proceeding with authentication...")
-                
-                # Fill username
-                username_field = self.driver.find_element(By.CLASS_NAME, "testEmailInput")
-                username_field.clear()
-                username_field.send_keys(self.username)
-                
-                # Fill password
-                password_field.clear()
-                password_field.send_keys(self.password)
-                
-                # Click login button
-                login_button = self.driver.find_element(By.CLASS_NAME, "testSignInButton")
-                login_button.click()
-                
-                # Wait for login to complete (page redirect or dashboard load)
-                print("⏳ Waiting for login to complete...")
-                time.sleep(8)  # Standard wait time for SEED login
-                
-                # Verify login success by checking URL or looking for logout elements
-                current_url = self.driver.current_url
-                if "mycantaloupe.com" in current_url and "login" not in current_url.lower():
-                    print("✅ Login successful")
-                    return True
-                else:
-                    print("❌ Login appears to have failed")
-                    return False
-                    
-            except TimeoutException:
-                # No login form found - might already be logged in
-                print("ℹ️ No login form detected - may already be logged in")
-                return True
+            # Fill credentials and login
+            await self.page.fill(".testEmailInput", self.username)
+            await self.page.fill(".testPasswordInput", self.password)
+            await self.page.click(".testSignInButton")
+            
+            # Wait for successful navigation after login
+            await self.page.wait_for_url("**/cs1/Home**")
+            
+            return True
                 
         except Exception as e:
-            print(f"❌ Login failed: {str(e)}")
+            print(f"Login failed: {e}")
             return False
     
-    def navigate_to_route_summary(self, target_date):
+    async def navigate_to_route_summary(self, target_date: str) -> bool:
         """
         Navigate to routes summary page for specific date
         
         Args:
-            target_date (str): Date in YYYY-MM-DD format
+            target_date: Date in YYYY-MM-DD format
             
         Returns:
-            bool: True if navigation successful, False otherwise
+            bool: True if navigation successful
         """
         try:
             # Construct routes summary URL with date
-            routes_url = f"https://mycantaloupe.com/cs4/Reports/RoutesSummary?date={target_date}"
+            routes_url = f"{self.base_url}/cs4/Reports/RoutesSummary?date={target_date}"
             print(f"🧭 Navigating to routes summary for {target_date}")
             
-            self.driver.get(routes_url)
-            
-            # Wait for page to load
-            time.sleep(3)
+            await self.page.goto(routes_url)
+            await self.page.wait_for_load_state('networkidle')
             
             # Check if we're on the correct page
-            if "RoutesSummary" in self.driver.current_url:
+            if "RoutesSummary" in self.page.url:
                 print("✅ Successfully navigated to routes summary")
                 return True
             else:
@@ -127,26 +89,32 @@ class SeedBrowser:
             print(f"❌ Navigation failed: {str(e)}")
             return False
     
-    def navigate_to_item_import_export(self):
+    async def navigate_to_item_import_export(self) -> bool:
         """
         Navigate to Item Import/Export page
         
         Returns:
-            bool: True if navigation successful, False otherwise
+            bool: True if navigation successful
         """
         try:
             print("🧭 Navigating to Item Import/Export page...")
             
             # Direct navigation to ItemImportExport
-            export_url = "https://mycantaloupe.com/cs4/ItemImportExport/ExcelExport"
-            self.driver.get(export_url)
+            export_url = f"{self.base_url}/cs4/ItemImportExport/ExcelExport"
+            await self.page.goto(export_url)
             
             # Wait for Vue.js app to load
             print("⏳ Waiting for Vue.js application to load...")
-            time.sleep(10)  # Vue.js apps need time to initialize
+            await self.page.wait_for_load_state('networkidle', timeout=15000)
+            
+            # Additional wait for Vue components
+            try:
+                await self.page.wait_for_selector("[data-v-]", timeout=5000)
+            except:
+                pass  # Vue attribute check is optional
             
             # Check if we're on the correct page
-            if "ItemImportExport" in self.driver.current_url:
+            if "ItemImportExport" in self.page.url:
                 print("✅ Successfully navigated to Item Import/Export")
                 return True
             else:
@@ -157,69 +125,69 @@ class SeedBrowser:
             print(f"❌ Navigation failed: {str(e)}")
             return False
     
-    def wait_for_element(self, by, value, timeout=10):
+    async def wait_for_element(self, selector: str, timeout: int = 10000):
         """
         Wait for element to be present
         
         Args:
-            by: Selenium By locator
-            value: Locator value
-            timeout: Maximum wait time in seconds
+            selector: CSS selector, text selector, or XPath
+            timeout: Maximum wait time in milliseconds
             
         Returns:
-            WebElement or None if not found
+            Element handle or None if not found
         """
         try:
-            element = WebDriverWait(self.driver, timeout).until(
-                EC.presence_of_element_located((by, value))
-            )
+            element = await self.page.wait_for_selector(selector, timeout=timeout)
             return element
-        except TimeoutException:
-            print(f"⚠️ Element not found: {by}={value}")
+        except PlaywrightTimeout:
+            print(f"⚠️ Element not found: {selector}")
             return None
     
-    def wait_for_clickable(self, by, value, timeout=10):
+    async def wait_for_clickable(self, selector: str, timeout: int = 10000):
         """
-        Wait for element to be clickable
+        Wait for element to be clickable (visible and enabled)
         
         Args:
-            by: Selenium By locator
-            value: Locator value
-            timeout: Maximum wait time in seconds
+            selector: CSS selector, text selector, or XPath
+            timeout: Maximum wait time in milliseconds
             
         Returns:
-            WebElement or None if not found
+            Element handle or None if not found
         """
         try:
-            element = WebDriverWait(self.driver, timeout).until(
-                EC.element_to_be_clickable((by, value))
+            element = await self.page.wait_for_selector(
+                selector, 
+                state='visible',
+                timeout=timeout
             )
-            return element
-        except TimeoutException:
-            print(f"⚠️ Element not clickable: {by}={value}")
+            if element and await element.is_enabled():
+                return element
+            return None
+        except PlaywrightTimeout:
+            print(f"⚠️ Element not clickable: {selector}")
             return None
     
-    def check_logged_in(self):
+    async def check_logged_in(self) -> bool:
         """
         Check if user is currently logged in to SEED
         
         Returns:
-            bool: True if logged in, False otherwise
+            bool: True if logged in
         """
         try:
-            current_url = self.driver.current_url
+            current_url = self.page.url
             
             # Check URL for indicators of being logged in
             if "mycantaloupe.com" in current_url and "login" not in current_url.lower():
-                # Additional check - look for common logged-in elements
+                # Additional check - look for logout button or user menu
                 try:
-                    # Look for elements that only appear when logged in
-                    self.wait_for_element(By.TAG_NAME, "body", timeout=3)
-                    return True
+                    await self.page.wait_for_selector("body", timeout=1000)
+                    # Check for common logged-in indicators
+                    if "dashboard" in current_url or "Reports" in current_url or "cs4" in current_url:
+                        return True
                 except:
-                    return False
-            else:
-                return False
+                    pass
+            return False
                 
         except Exception:
             return False

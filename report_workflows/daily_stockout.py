@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 from database.queries import execute_all_queries, get_sample_data
 from database.connection import test_database_connection
-from excel_processing.stockout_excel import StockoutExcelProcessor, get_stockout_template_info
+from excel_processing.stockout_excel import StockoutExcelProcessor
 
 def validate_prerequisites():
     """
@@ -22,26 +22,15 @@ def validate_prerequisites():
     print("🔍 Validating prerequisites...")
     
     validation_results = {
-        'template_exists': False,
         'database_connected': False,
         'all_valid': False
     }
-    
-    # Check template
-    template_info = get_stockout_template_info()
-    validation_results['template_exists'] = template_info['exists']
-    validation_results['template_info'] = template_info
-    
-    if validation_results['template_exists']:
-        print("✅ Template file found")
-    else:
-        print("❌ Template file not found")
     
     # Check database
     validation_results['database_connected'] = test_database_connection()
     
     # Overall validation
-    validation_results['all_valid'] = all(validation_results.values())
+    validation_results['all_valid'] = validation_results['database_connected']
     
     if validation_results['all_valid']:
         print("✅ All prerequisites validated")
@@ -137,8 +126,6 @@ def process_stockout_report(use_sample_data=False, output_directory="downloads/d
             if not validation['database_connected']:
                 print("⚠️ Database not available, switching to sample data")
                 use_sample_data = True
-            elif not validation['template_exists']:
-                raise Exception("Template file is required but not found")
         
         # Step 2: Fetch data
         raw_data = fetch_stockout_data(use_sample_data)
@@ -197,7 +184,6 @@ def get_stockout_processing_status():
     
     status = {
         'ready_for_processing': validation['all_valid'],
-        'template': validation['template_info'],
         'database': {
             'connected': validation['database_connected'],
             'dsn': 'Lightspeed',

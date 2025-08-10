@@ -1,31 +1,31 @@
 # Monumator - Claude Documentation
 
-## 🎯 System Overview
+## System Overview
 
-Monumator is a streamlined automation system for Monumental Markets that integrates with SEED (Cantaloupe) and Lightspeed databases to generate comprehensive business reports. The system features a clean modular architecture with arrow-key navigation and expandable report workflows.
+Automation system for Monumental Markets that generates business reports from SEED (Cantaloupe) and SQL Server databases.
 
 ### Core Capabilities
-- **Arrow-Key Navigation**: Intuitive console menus with sub-navigation
-- **Dual Database Integration**: LightSpeed + Level databases with pandas merging
-- **Excel Automation**: Template-based reports using openpyxl + xlwings
-- **Web Scraping**: Selenium-based SEED website automation
-- **Concurrent Downloads**: Multi-threaded SEED API processing
-- **Modular Design**: Easy to extend with new reports and functionality
+- Arrow-key navigation menus
+- SQL Server database integration (LightSpeed + Level)
+- Excel report generation (openpyxl + xlwings)
+- Web automation (Playwright + Firefox)
+- API downloads
+- System health checks
+- Modular architecture
 
 ### Business Context
-- **Target System**: SEED (Cantaloupe) vending management platform
-- **Data Sources**: SEED API + Lightspeed databases + Web scraping
-- **Output**: Formatted Excel reports for business operations
-- **Reports**: Daily stockout analysis, Inventory adjustments, Weekly analytics
+- Target System: SEED (Cantaloupe) vending management
+- Data Sources: SEED API, SQL Server databases, web scraping
+- Output: Excel reports
+- Reports: Daily stockout, inventory adjustments, weekly analytics
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ### Design Philosophy
-The system follows a **simple, modular approach** with:
-- **Direct imports** (no complex package structure)
-- **Clear separation** of concerns across modules
-- **Minimal boilerplate** for maximum maintainability
-- **Expandable structure** for future growth
+- Direct imports (no complex packages)
+- Modular separation
+- Minimal boilerplate
+- Expandable structure
 
 ### Project Structure
 ```
@@ -40,11 +40,12 @@ Monumator/
 │   ├── base_excel.py          # Common Excel utilities
 │   ├── stockout_excel.py      # Daily stockout (openpyxl)
 │   └── inventory_excel.py     # Inventory adjustment (xlwings)
-├── web_automation/            # Browser automation (direct imports)
-│   ├── base_scraper.py        # Common browser setup
-│   ├── seed_browser.py        # SEED login & navigation
-│   ├── inventory_scraper.py   # Inventory confirmation scraping
-│   └── product_scraper.py     # Product list downloads
+├── web_automation/            # Async Playwright automation (direct imports)
+│   ├── base_scraper.py        # Async Firefox browser setup
+│   ├── seed_browser.py        # Async SEED login & navigation
+│   ├── inventory_scraper.py   # Async inventory confirmation
+│   ├── product_scraper.py     # Async product downloads
+│   └── firefox_profile/       # Persistent Firefox profile
 ├── report_workflows/          # Complete workflows (direct imports)
 │   ├── daily_stockout.py      # Daily stockout workflow (implemented)
 │   ├── inventory_adjustment.py # Inventory adjustment (implemented)
@@ -66,7 +67,7 @@ Monumator/
 └── weekly_reports.py          # Weekly reports sub-menu system
 ```
 
-## 🔧 Core Components
+## Core Components
 
 ### 1. Navigation System
 
@@ -85,9 +86,9 @@ class MenuNavigator:
 
 ### 2. Database Integration (`database/`)
 
-**Dual Database Architecture:**
-- **LightSpeed Database**: `dbo.ItemView` (order data)
-- **Level Database**: `dbo.AreaItemParView` (inventory data)
+**Dual SQL Server Architecture:**
+- **LightSpeed Database**: `dbo.ItemView` (order data) at 10.216.207.32
+- **Level Database**: `dbo.AreaItemParView` (inventory data) at 10.216.207.32
 
 **Key Functions:**
 ```python
@@ -135,22 +136,28 @@ class InventoryExcelProcessor(ExcelProcessorBase):
 
 ### 4. Web Automation (`web_automation/`)
 
-**Browser Automation Framework:**
+**Async Browser Automation with Playwright & Firefox:**
 ```python
 # base_scraper.py
 class BaseScraper:
-    setup_browser()          # Edge/Chrome configuration
-    cleanup_browser()        # Resource cleanup
+    async setup_browser()    # Firefox with Playwright (async)
+    async cleanup_browser()  # Automatic resource cleanup
 
 # seed_browser.py
 class SeedBrowser:
-    login()                  # Automatic SEED authentication
-    navigate_to()            # Common SEED navigation
+    async login()            # Async SEED authentication
+    async navigate_to()      # Async navigation methods
 
-# Specialized scrapers
-inventory_scraper.py         # Route-based inventory confirmation
-product_scraper.py          # Product list downloads
+# Specialized scrapers (all async with sync wrappers)
+inventory_scraper.py         # Async route inventory confirmation
+product_scraper.py          # Native download handling with Playwright
 ```
+
+**Key Features:**
+- Firefox browser
+- Async architecture
+- Native downloads
+- Clean implementation
 
 ### 5. Report Workflows (`report_workflows/`)
 
@@ -197,14 +204,15 @@ DOWNLOAD_PATHS = {
 **Database Configuration (`database_config.py`):**
 ```python
 LIGHTSPEED_CONNECTION = {
-    "dsn": "Lightspeed",
-    "uid": "LSReadOnly",
-    "pwd": "LightSpeed100!",
-    "database": "LightSpeed"
+    "connection_string": f"DRIVER={{SQL Server}};SERVER=10.216.207.32;DATABASE=LightSpeed;UID={DB_USERNAME};PWD={DB_PASSWORD}"
+}
+
+LEVEL_CONNECTION = {
+    "connection_string": f"DRIVER={{SQL Server}};SERVER=10.216.207.32;DATABASE=Level;UID={DB_USERNAME};PWD={DB_PASSWORD}"
 }
 ```
 
-## 🚀 User Workflows
+## User Workflows
 
 ### Main Menu Navigation
 ```
@@ -246,7 +254,7 @@ python main.py
 └─ 🎯 Process All Weekly Reports (legacy + future)
 ```
 
-## 🔄 Data Flow Examples
+## Data Flow Examples
 
 ### Daily Stockout Report Flow
 ```
@@ -276,7 +284,7 @@ User selects Weekly Sales → Process Report
 └─ Return results
 ```
 
-## 🛠️ How to Extend the System
+## How to Extend the System
 
 ### Adding a New Daily Report
 1. **Create workflow file**: `report_workflows/new_daily_report.py`
@@ -299,12 +307,13 @@ User selects Weekly Sales → Process Report
 2. **Use connections**: `get_lightspeed_connection()` or `get_level_connection()`
 3. **Return DataFrame**: Use `execute_query()` helper
 
-## 🔍 System Status & Health Checks
+## System Status & Health Checks
 
 ### Built-in Validation
-- **Database connectivity**: Silent connection testing
-- **Template availability**: Excel template validation
-- **SEED credentials**: Environment variable checking
+- Database connectivity testing
+- SEED login testing
+- Template validation
+- Environment variable checking
 - **Prerequisites**: Per-report validation functions
 
 ### Testing Commands
@@ -319,22 +328,24 @@ python -c "from excel_processing.stockout_excel import get_stockout_template_inf
 python main.py
 ```
 
-## 📊 Performance & Scalability
+## Performance & Scalability
 
-### Optimizations
-- **Concurrent Downloads**: Up to 5 simultaneous SEED API calls
-- **Efficient Database**: Separate connections for optimal query performance
-- **Template Reuse**: Excel templates copied, not recreated
-- **Headless Automation**: Faster web scraping in production
-- **Clean Resource Management**: Proper cleanup of browser sessions and database connections
+### Features
+- Concurrent downloads (up to 25 API calls)
+- Direct SQL Server connections
+- Excel template reuse
+- Async web automation
+- Persistent Firefox profile
+- **Clean Resource Management**: Automatic cleanup with async context managers
+- **Native Download Handling**: Built-in Playwright download monitoring
 
 ### Expandability
-- **Modular Design**: Add new reports without touching existing code
-- **Direct Imports**: No complex package dependencies
-- **Clear Patterns**: All workflows follow consistent structure
-- **Skeleton Files**: 7 weekly reports ready for implementation
+- Modular design
+- Direct imports
+- Consistent patterns
+- Skeleton files for weekly reports
 
-## 🔒 Security & Environment
+## Security & Environment
 
 ### Environment Variables
 ```bash

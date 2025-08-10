@@ -1,198 +1,137 @@
 """
-Base Web Scraper
-================
+Base Web Scraper - Playwright Edition
+======================================
 
-Common browser setup and utilities for all web scraping operations.
-Handles Edge browser configuration and cleanup.
+Async browser automation with Firefox and Playwright.
+Handles browser setup, cleanup, and common utilities.
 """
-
-import os
-import sys
-import time
-import tempfile
-from selenium import webdriver
-from selenium.webdriver.edge.service import Service
-from selenium.webdriver.edge.options import Options
-from selenium.common.exceptions import WebDriverException
+from typing import Optional
+from playwright.async_api import async_playwright, Browser, BrowserContext, Page
+from playwright.async_api import TimeoutError as PlaywrightTimeout
 
 class BaseScraper:
     """
-    Base class for web scraping with common browser setup
+    Base class for async web scraping with Playwright and Firefox
     """
     
-    def __init__(self, headless=True):
+    def __init__(self, headless: bool = True):
         """
         Initialize base scraper
         
         Args:
-            headless (bool): Run browser in headless mode
+            headless: Run browser in headless mode
         """
         self.headless = headless
-        self.driver = None
-        self.original_stderr = None
+        self.playwright = None
+        self.browser: Optional[Browser] = None
+        self.context: Optional[BrowserContext] = None
+        self.page: Optional[Page] = None
         
-    def setup_browser(self):
+    async def setup_browser(self) -> Page:
         """
-        Setup Edge browser with optimized configuration
+        Setup Firefox browser with optimized configuration
         
         Returns:
-            webdriver.Edge: Configured Edge driver
+            Page: Configured browser page
         """
-        print("🌐 Setting up Microsoft Edge browser...")
-        
-        # Suppress stderr for headless mode
-        if self.headless:
-            self.original_stderr = sys.stderr
-            sys.stderr = open(os.devnull, 'w')
+        print("🦊 Setting up Firefox browser...")
         
         try:
-            # Configure Edge options
-            edge_options = Options()
+            # Start Playwright
+            self.playwright = await async_playwright().start()
             
-            # Basic browser settings
-            if self.headless:
-                edge_options.add_argument("--headless")
+            # Launch Firefox with persistent profile for extensions
+            self.context = await self.playwright.firefox.launch_persistent_context(
+                user_data_dir="./web_automation/firefox_profile",
+                headless=self.headless,
+                viewport={'width': 1920, 'height': 1080},
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+                accept_downloads=True,
+                ignore_https_errors=True
+            )
             
-            # Performance and stability options
-            edge_options.add_argument("--no-sandbox")
-            edge_options.add_argument("--disable-dev-shm-usage")
-            edge_options.add_argument("--disable-gpu")
-            edge_options.add_argument("--disable-extensions")
-            edge_options.add_argument("--disable-background-timer-throttling")
-            edge_options.add_argument("--disable-renderer-backgrounding")
-            edge_options.add_argument("--disable-backgrounding-occluded-windows")
+            # Set default timeout
+            self.context.set_default_timeout(10000)
             
-            # Disable logging (extensive Chrome/Chromium suppression)
-            edge_options.add_argument("--disable-logging")
-            edge_options.add_argument("--disable-background-timer-throttling")
-            edge_options.add_argument("--disable-backgrounding-occluded-windows")
-            edge_options.add_argument("--disable-renderer-backgrounding")
-            edge_options.add_argument("--disable-features=TranslateUI")
-            edge_options.add_argument("--disable-ipc-flooding-protection")
-            edge_options.add_argument("--disable-background-timer-throttling")
-            edge_options.add_argument("--disable-backgrounding-occluded-windows")
-            edge_options.add_argument("--disable-client-side-phishing-detection")
-            edge_options.add_argument("--disable-component-update")
-            edge_options.add_argument("--disable-default-apps")
-            edge_options.add_argument("--disable-domain-reliability")
-            edge_options.add_argument("--disable-features=VizDisplayCompositor")
-            edge_options.add_argument("--disable-hang-monitor")
-            edge_options.add_argument("--disable-prompt-on-repost")
-            edge_options.add_argument("--disable-sync")
-            edge_options.add_argument("--disable-web-security")
-            edge_options.add_argument("--metrics-recording-only")
-            edge_options.add_argument("--no-first-run")
-            edge_options.add_argument("--safebrowsing-disable-auto-update")
-            edge_options.add_argument("--enable-automation")
-            edge_options.add_argument("--password-store=basic")
-            edge_options.add_argument("--use-mock-keychain")
+            # Use existing page from persistent context
+            self.page = self.context.pages[0]
             
-            # Download preferences (for product list downloads)
-            temp_download_dir = tempfile.mkdtemp()
-            prefs = {
-                "download.default_directory": temp_download_dir,
-                "download.prompt_for_download": False,
-                "download.directory_upgrade": True,
-                "safebrowsing.enabled": False,
-                "safebrowsing.disable_download_protection": True,
-                "profile.default_content_settings.popups": 0,
-                "profile.default_content_setting_values.automatic_downloads": 1
-            }
-            edge_options.add_experimental_option("prefs", prefs)
-            
-            # User agent
-            edge_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59")
-            
-            # Create Edge service
-            service = Service()
-            
-            # Create driver
-            self.driver = webdriver.Edge(service=service, options=edge_options)
-            
-            # Configure timeouts
-            self.driver.set_page_load_timeout(30)
-            self.driver.implicitly_wait(10)
-            
-            print("✅ Edge browser setup complete")
-            return self.driver
+            print("✅ Firefox browser setup complete")
+            return self.page
             
         except Exception as e:
             print(f"❌ Failed to setup browser: {str(e)}")
-            self._cleanup_stderr()
+            await self.cleanup_browser()
             raise
     
-    def cleanup_browser(self):
+    async def cleanup_browser(self):
         """
         Clean up browser resources
         """
-        if self.driver:
-            try:
-                self.driver.quit()
-                print("🧹 Browser cleanup complete")
-            except Exception as e:
-                print(f"⚠️ Browser cleanup warning: {str(e)}")
-            finally:
-                self.driver = None
-                
-        self._cleanup_stderr()
+        try:
+            if self.page:
+                await self.page.close()
+            if self.context:
+                await self.context.close()
+            if self.browser:
+                await self.browser.close()
+            if self.playwright:
+                await self.playwright.stop()
+        except Exception as e:
+            print(f"⚠️ Browser cleanup warning: {str(e)}")
+        finally:
+            self.page = None
+            self.context = None
+            self.browser = None
+            self.playwright = None
     
-    def _cleanup_stderr(self):
-        """
-        Restore stderr if it was redirected
-        """
-        if self.original_stderr:
-            sys.stderr.close()
-            sys.stderr = self.original_stderr
-            self.original_stderr = None
-    
-    def wait_for_page_load(self, timeout=10):
+    async def wait_for_page_load(self, timeout: int = 8000):
         """
         Wait for page to fully load
         
         Args:
-            timeout (int): Maximum time to wait in seconds
+            timeout: Maximum time to wait in milliseconds
         """
         try:
-            start_time = time.time()
-            while time.time() - start_time < timeout:
-                if self.driver.execute_script("return document.readyState") == "complete":
-                    return True
-                time.sleep(0.5)
-            print(f"⚠️ Page load timeout after {timeout} seconds")
+            if self.page:
+                await self.page.wait_for_load_state('networkidle', timeout=timeout)
+                return True
+        except PlaywrightTimeout:
+            print(f"⚠️ Page load timeout after {timeout/1000} seconds")
             return False
         except Exception as e:
             print(f"⚠️ Error waiting for page load: {str(e)}")
             return False
     
-    def safe_click(self, element, max_retries=3):
+    async def safe_click(self, selector: str, max_retries: int = 3) -> bool:
         """
         Safely click an element with retry logic
         
         Args:
-            element: WebElement to click
-            max_retries (int): Maximum retry attempts
+            selector: CSS selector or text selector
+            max_retries: Maximum retry attempts
             
         Returns:
-            bool: True if click succeeded, False otherwise
+            bool: True if click succeeded
         """
         for attempt in range(max_retries):
             try:
-                element.click()
-                return True
+                if self.page:
+                    await self.page.click(selector, timeout=5000)
+                    return True
             except Exception as e:
                 if attempt < max_retries - 1:
                     print(f"⚠️ Click attempt {attempt + 1} failed, retrying...")
-                    time.sleep(1)
                 else:
                     print(f"❌ Click failed after {max_retries} attempts: {str(e)}")
                     return False
         return False
     
-    def __enter__(self):
-        """Context manager entry"""
-        self.setup_browser()
+    async def __aenter__(self):
+        """Async context manager entry"""
+        await self.setup_browser()
         return self
         
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit"""
-        self.cleanup_browser()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit"""
+        await self.cleanup_browser()

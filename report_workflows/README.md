@@ -1,8 +1,8 @@
-# Report Workflows Module
+# 🔄 Report Workflows Module
 
 Contains complete end-to-end workflows for generating reports from data acquisition to Excel output.
 
-## Files
+## 📄 Files
 
 **Daily Reports (Implemented):**
 - **`daily_stockout.py`** - Daily stockout report from database
@@ -19,7 +19,7 @@ Contains complete end-to-end workflows for generating reports from data acquisit
 - **`spoilage_shrink.py`** - Spoilage tracking (skeleton ready)
 - **`warehouse_inventory.py`** - Warehouse inventory (skeleton ready)
 
-## How It Works
+## ⚙️ How It Works
 
 Each workflow follows the same pattern:
 1. **Validate prerequisites** - Check templates, database, credentials
@@ -28,7 +28,7 @@ Each workflow follows the same pattern:
 4. **Generate Excel** - Create reports using templates
 5. **Return results** - Status and file paths
 
-## Usage
+## 🚀 Usage
 
 ### Daily Stockout Report
 ```python
@@ -62,7 +62,7 @@ if results['success']:
     print(f"Routes found: {results['routes_found']}")
 ```
 
-## Adding New Workflows
+## ➕ Adding New Workflows
 
 ### Step 1: Create Workflow File
 Create `new_report.py`:
@@ -141,7 +141,7 @@ elif choice == 11:
         print(f"❌ Report failed: {results['error']}")
 ```
 
-## Standard Result Format
+## 📋 Standard Result Format
 
 All workflows return this format:
 ```python
@@ -157,7 +157,7 @@ All workflows return this format:
 }
 ```
 
-## Integration Points
+## 🔗 Integration Points
 
 Uses all other modules:
 - **database** - For SQL queries and data retrieval

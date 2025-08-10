@@ -1,19 +1,20 @@
-# Database Module
+# 💾 Database Module
 
-Handles connections to LightSpeed and Level databases and executes SQL queries.
+SQL Server connections and queries for LightSpeed and Level databases.
 
-## Files
+## 📄 Files
 
 - **`connection.py`** - Database connection management
 - **`queries.py`** - SQL queries and data processing
 
-## How It Works
+## 📊 Databases
 
-Connects to two separate databases and merges data using pandas:
-1. **LightSpeed** - `dbo.ItemView` (order data)
-2. **Level** - `dbo.AreaItemParView` (inventory data)
+- **LightSpeed** - `dbo.ItemView` (order data)
+- **Level** - `dbo.AreaItemParView` (inventory data)
 
-## Usage
+Server: 10.216.207.32
+
+## 🚀 Usage
 
 ### Connect to Databases
 ```python
@@ -40,7 +41,7 @@ from database.connection import test_database_connection
 is_connected = test_database_connection()
 ```
 
-## Adding New Queries
+## ➕ Adding New Queries
 
 ### Step 1: Add Function to `queries.py`
 ```python
@@ -70,5 +71,7 @@ def execute_all_queries():
 
 ## Database Tables
 
-- **LightSpeed.dbo.ItemView** - Order data (`product`, `quantity`, `orderDate`)
+- **LightSpeed.dbo.ItemView** - Order data (`product`, `quantity`, `orderDate`, `locID`)
 - **Level.dbo.AreaItemParView** - Inventory data (`itemName`, `currentQty`, `itemActive`)
+
+Merged on `product` = `itemName`.

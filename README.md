@@ -1,6 +1,6 @@
 # Monumator
 
-A streamlined automation system for Monumental Markets that integrates with SEED (Cantaloupe) and Lightspeed to generate comprehensive reports. Built with a modular, expandable architecture for easy maintenance and feature additions.
+Automation system for Monumental Markets that generates business reports from SEED (Cantaloupe) and SQL Server databases.
 
 
 ## 📁 Project Structure
@@ -17,11 +17,12 @@ Monumator/
 │   ├── base_excel.py          # Common Excel utilities
 │   ├── stockout_excel.py      # Daily stockout reports (openpyxl)
 │   └── inventory_excel.py     # Inventory reports (xlwings)
-├── web_automation/            # Browser automation (direct imports)
-│   ├── base_scraper.py        # Common browser setup
-│   ├── seed_browser.py        # SEED login/navigation
-│   ├── inventory_scraper.py   # Inventory confirmation scraping
-│   └── product_scraper.py     # Product list downloads
+├── web_automation/            # Async Playwright Firefox automation (direct imports)
+│   ├── base_scraper.py        # Async Firefox browser setup
+│   ├── seed_browser.py        # Async SEED login/navigation
+│   ├── inventory_scraper.py   # Async inventory confirmation
+│   ├── product_scraper.py     # Async product downloads
+│   └── firefox_profile/       # Persistent Firefox profile
 ├── report_workflows/          # Complete report workflows (direct imports)
 │   ├── daily_stockout.py      # Daily stockout workflow
 │   ├── inventory_adjustment.py # Inventory adjustment workflow
@@ -45,10 +46,10 @@ Monumator/
 ## 🛠️ Installation
 
 ### Prerequisites
-- Python 3.7+
-- Microsoft Edge browser (for web scraping)
-- Excel (for inventory adjustment reports)
-- Lightspeed ODBC DSN configured
+- Python 3.8+
+- Firefox browser
+- Excel
+- VPN access to SQL Server databases
 
 ### Setup
 1. **Clone the repository**
@@ -60,6 +61,7 @@ Monumator/
 2. **Install dependencies**
    ```bash
    pip install -r requirements.txt
+   playwright install firefox
    ```
 
 3. **Configure environment variables**
@@ -72,7 +74,7 @@ Monumator/
    ```
 
 4. **Configure database**
-   Ensure Lightspeed ODBC DSN is set up on your system
+   System uses direct SQL Server connections to LightSpeed and Level databases
 
 ## 🚀 Usage
 
@@ -223,11 +225,10 @@ MAX_CONCURRENT_DOWNLOADS = 25  # Adjust as needed
 ## 🔍 System Status
 
 ### Health Checks
-The system includes comprehensive status checking:
-- Template file availability
-- Database connectivity
-- Download directory structure
-- Selenium dependencies
+System status checking:
+- Template files
+- Database connections
+- SEED login
 - Environment variables
 
 ### Testing
@@ -244,44 +245,43 @@ python -c "from utils.downloader import get_seed_credentials; print(bool(get_see
 
 ## 🛡️ Error Handling
 
-- **Graceful Degradation**: Sample data fallback when database unavailable
-- **Retry Logic**: Automatic retries for failed operations
-- **Comprehensive Logging**: Detailed error messages with context
-- **Resource Cleanup**: Automatic cleanup of browser sessions and temp files
-- **Validation**: Prerequisites checking before processing
+- Sample data fallback
+- Automatic retries
+- Error logging
+- Resource cleanup
+- Prerequisites validation
 
-## 📈 Performance
+## ✨ Features
 
-- **Concurrent Downloads**: Up to 25 simultaneous API downloads
-- **Optimized Queries**: Efficient database operations
-- **Template Caching**: Reused Excel templates
-- **Headless Automation**: Faster web scraping in production
-- **Memory Management**: Proper resource cleanup
+- Concurrent API downloads
+- Database query operations
+- Excel template processing
+- Headless web automation
+- Resource cleanup
 
 ## 🔒 Security
 
-- **Environment Variables**: Credentials stored securely in `.env`
-- **Read-only Database**: Limited database permissions
-- **Input Validation**: SQL injection prevention
-- **Secure Authentication**: Base64 encoded API authentication
+- Environment variables for credentials
+- Read-only database access
+- Input validation
+- API authentication
 
-## 📋 Dependencies
+## 📦 Dependencies
 
-### Core Dependencies
 ```
-requests>=2.25.1          # HTTP requests and API calls
-pandas>=1.3.0             # Data manipulation
-python-dotenv>=0.19.0     # Environment variables
-pyodbc>=4.0.35            # Database connectivity
-openpyxl>=3.1.0           # Excel operations
-xlwings>=0.30.0           # Excel automation
-selenium>=4.0.0           # Browser automation
+requests
+pandas
+python-dotenv
+pyodbc
+openpyxl
+xlwings
+playwright
 ```
 
 ### System Requirements
-- **ODBC DSN**: Lightspeed database connection
-- **Microsoft Edge**: Browser for automation
-- **Excel**: Required for xlwings operations
+- SQL Server access
+- Firefox browser
+- Excel application
 
 
 ## 🤝 Contributing
@@ -300,8 +300,8 @@ selenium>=4.0.0           # Browser automation
 - Run system status check for comprehensive diagnostics
 
 ### Common Issues
-- **Database Connection**: If accessing remotely, ensure Monumental Markets VPN is connected, verify ODBC DSN configuration
-- **Web Scraping**: Check Edge browser and internet connectivity
+- **Database Connection**: Ensure VPN connection to access SQL Server at 10.216.207.32
+- **Web Scraping**: Check Firefox browser and internet connectivity
 - **Permissions**: Verify file write permissions in download directories
 
 ---

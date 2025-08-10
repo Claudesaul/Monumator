@@ -36,12 +36,7 @@ def get_inventory_confirmation_status():
     Returns:
         dict: Status information
     """
-    import os
     from datetime import datetime
-    
-    # Check template file
-    template_path = "templates/Daily Inventory SEED.xlsx"
-    template_exists = os.path.exists(template_path)
     
     # Check selenium availability
     try:
@@ -51,9 +46,7 @@ def get_inventory_confirmation_status():
         selenium_available = False
     
     status = {
-        'ready_for_processing': template_exists and selenium_available,
-        'template_exists': template_exists,
-        'template_path': template_path,
+        'ready_for_processing': selenium_available,
         'selenium_available': selenium_available,
         'target_routes': ["Rt 102", "Rt 106", "Rt 206", "Rt 305"],
         'last_checked': datetime.now().strftime('%Y-%m-%d %H:%M:%S')

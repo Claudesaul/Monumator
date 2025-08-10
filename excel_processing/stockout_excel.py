@@ -169,13 +169,3 @@ class StockoutExcelProcessor(ExcelProcessorBase):
         except Exception as e:
             print(f"❌ Failed to generate stockout report: {str(e)}")
             raise
-
-def get_stockout_template_info():
-    """
-    Get Daily Stockout template information
-    
-    Returns:
-        dict: Template file information
-    """
-    processor = StockoutExcelProcessor()
-    return processor.get_template_info()

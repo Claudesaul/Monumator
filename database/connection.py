@@ -76,7 +76,7 @@ def execute_query(connection, query, params=None):
 
 def test_database_connection():
     """
-    Test both database connections
+    Test both database connections with debug output
     
     Returns:
         bool: True if both connections successful, False otherwise
@@ -96,6 +96,7 @@ def test_database_connection():
         
         return True
     except Exception as e:
+        print(f"Database test failed: {str(e)}")
         return False
 
 def get_connection_info():
