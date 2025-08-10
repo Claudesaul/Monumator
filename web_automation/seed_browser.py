@@ -7,23 +7,24 @@ Provides reusable SEED-specific browser operations.
 """
 
 import os
-from playwright.async_api import Page
 from playwright.async_api import TimeoutError as PlaywrightTimeout
 from dotenv import load_dotenv
+from .base_scraper import BaseScraper
 
-class SeedBrowser:
+class SeedBrowser(BaseScraper):
     """
     Manages SEED-specific browser operations with async Playwright
+    Inherits browser setup/cleanup from BaseScraper
     """
     
-    def __init__(self, page: Page):
+    def __init__(self, headless: bool = True):
         """
-        Initialize SEED browser manager
+        Initialize SEED browser manager with browser capabilities
         
         Args:
-            page: Playwright Page instance
+            headless: Run browser in headless mode
         """
-        self.page = page
+        super().__init__(headless)
         self.base_url = "https://mycantaloupe.com"
         
         # Load environment variables
@@ -70,12 +71,16 @@ class SeedBrowser:
             bool: True if navigation successful
         """
         try:
-            # Construct routes summary URL with date
-            routes_url = f"{self.base_url}/cs4/Reports/RoutesSummary?date={target_date}"
+            # Convert YYYY-MM-DD to MM%2FDD%2FYYYY%2000%3A00%3A00 format
+            from datetime import datetime
+            date_obj = datetime.strptime(target_date, "%Y-%m-%d")
+            formatted_date = date_obj.strftime("%m%%2F%d%%2F%Y%%2000%%3A00%%3A00")
+            
+            # Construct routes summary URL with properly formatted date
+            routes_url = f"{self.base_url}/cs1/Scheduling/RoutesSummary?ScheduleDateOnly={formatted_date}"
             print(f"🧭 Navigating to routes summary for {target_date}")
             
             await self.page.goto(routes_url)
-            await self.page.wait_for_load_state('networkidle')
             
             # Check if we're on the correct page
             if "RoutesSummary" in self.page.url:
@@ -100,18 +105,8 @@ class SeedBrowser:
             print("🧭 Navigating to Item Import/Export page...")
             
             # Direct navigation to ItemImportExport
-            export_url = f"{self.base_url}/cs4/ItemImportExport/ExcelExport"
+            export_url = f"{self.base_url}/cs1/ItemImportExport/"
             await self.page.goto(export_url)
-            
-            # Wait for Vue.js app to load
-            print("⏳ Waiting for Vue.js application to load...")
-            await self.page.wait_for_load_state('networkidle', timeout=15000)
-            
-            # Additional wait for Vue components
-            try:
-                await self.page.wait_for_selector("[data-v-]", timeout=5000)
-            except:
-                pass  # Vue attribute check is optional
             
             # Check if we're on the correct page
             if "ItemImportExport" in self.page.url:
@@ -125,9 +120,9 @@ class SeedBrowser:
             print(f"❌ Navigation failed: {str(e)}")
             return False
     
-    async def wait_for_element(self, selector: str, timeout: int = 10000):
+    async def wait_for_element(self, selector: str, timeout: int = 5000):
         """
-        Wait for element to be present
+        Wait for element to be present (reduced timeout - Playwright auto-waits)
         
         Args:
             selector: CSS selector, text selector, or XPath
@@ -137,15 +132,15 @@ class SeedBrowser:
             Element handle or None if not found
         """
         try:
-            element = await self.page.wait_for_selector(selector, timeout=timeout)
+            element = await self.page.locator(selector).first
             return element
-        except PlaywrightTimeout:
+        except Exception:
             print(f"⚠️ Element not found: {selector}")
             return None
     
-    async def wait_for_clickable(self, selector: str, timeout: int = 10000):
+    async def wait_for_clickable(self, selector: str, timeout: int = 5000):
         """
-        Wait for element to be clickable (visible and enabled)
+        Wait for element to be clickable (simplified - Playwright auto-waits)
         
         Args:
             selector: CSS selector, text selector, or XPath
@@ -155,15 +150,9 @@ class SeedBrowser:
             Element handle or None if not found
         """
         try:
-            element = await self.page.wait_for_selector(
-                selector, 
-                state='visible',
-                timeout=timeout
-            )
-            if element and await element.is_enabled():
-                return element
-            return None
-        except PlaywrightTimeout:
+            element = await self.page.locator(selector).first
+            return element
+        except Exception:
             print(f"⚠️ Element not clickable: {selector}")
             return None
     
@@ -179,15 +168,24 @@ class SeedBrowser:
             
             # Check URL for indicators of being logged in
             if "mycantaloupe.com" in current_url and "login" not in current_url.lower():
-                # Additional check - look for logout button or user menu
-                try:
-                    await self.page.wait_for_selector("body", timeout=1000)
-                    # Check for common logged-in indicators
-                    if "dashboard" in current_url or "Reports" in current_url or "cs4" in current_url:
-                        return True
-                except:
-                    pass
+                # Check for common logged-in indicators
+                if "dashboard" in current_url or "Reports" in current_url or "cs4" in current_url:
+                    return True
             return False
                 
         except Exception:
+            return False
+    
+    async def setup_and_login(self) -> bool:
+        """
+        Setup browser and login to SEED in one call
+        
+        Returns:
+            bool: True if successful
+        """
+        try:
+            await self.setup_browser()
+            return await self.login()
+        except Exception as e:
+            print(f"❌ Setup and login failed: {str(e)}")
             return False

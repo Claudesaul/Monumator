@@ -20,8 +20,8 @@ Monumator/
 ├── web_automation/            # Async Playwright Firefox automation (direct imports)
 │   ├── base_scraper.py        # Async Firefox browser setup
 │   ├── seed_browser.py        # Async SEED login/navigation
-│   ├── inventory_scraper.py   # Async inventory confirmation
-│   ├── product_scraper.py     # Async product downloads
+│   ├── inventory_confirmation_scraper.py   # Async route inventory confirmation
+│   ├── items_scraper.py       # Async item export downloads
 │   └── firefox_profile/       # Persistent Firefox profile
 ├── report_workflows/          # Complete report workflows (direct imports)
 │   ├── daily_stockout.py      # Daily stockout workflow

@@ -43,8 +43,8 @@ Monumator/
 ├── web_automation/            # Async Playwright automation (direct imports)
 │   ├── base_scraper.py        # Async Firefox browser setup
 │   ├── seed_browser.py        # Async SEED login & navigation
-│   ├── inventory_scraper.py   # Async inventory confirmation
-│   ├── product_scraper.py     # Async product downloads
+│   ├── inventory_confirmation_scraper.py   # Async route inventory confirmation
+│   ├── items_scraper.py       # Async item export downloads
 │   └── firefox_profile/       # Persistent Firefox profile
 ├── report_workflows/          # Complete workflows (direct imports)
 │   ├── daily_stockout.py      # Daily stockout workflow (implemented)
@@ -149,15 +149,15 @@ class SeedBrowser:
     async navigate_to()      # Async navigation methods
 
 # Specialized scrapers (all async with sync wrappers)
-inventory_scraper.py         # Async route inventory confirmation
-product_scraper.py          # Native download handling with Playwright
+inventory_confirmation_scraper.py  # Find routes with missing inventory, exclude FF/STATIC
+items_scraper.py                   # Download item export files from SEED
 ```
 
 **Key Features:**
-- Firefox browser
-- Async architecture
-- Native downloads
-- Clean implementation
+- Firefox browser with persistent profile
+- Async architecture 
+- Native download handling
+- Minimal wait conditions (Playwright auto-waits)
 
 ### 5. Report Workflows (`report_workflows/`)
 

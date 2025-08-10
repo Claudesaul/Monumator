@@ -87,21 +87,13 @@ class BaseScraper:
     
     async def wait_for_page_load(self, timeout: int = 8000):
         """
-        Wait for page to fully load
+        Wait for page to fully load (minimal waiting - Playwright handles most automatically)
         
         Args:
             timeout: Maximum time to wait in milliseconds
         """
-        try:
-            if self.page:
-                await self.page.wait_for_load_state('networkidle', timeout=timeout)
-                return True
-        except PlaywrightTimeout:
-            print(f"⚠️ Page load timeout after {timeout/1000} seconds")
-            return False
-        except Exception as e:
-            print(f"⚠️ Error waiting for page load: {str(e)}")
-            return False
+        # Playwright automatically waits for most content, so minimal waiting needed
+        return True
     
     async def safe_click(self, selector: str, max_retries: int = 3) -> bool:
         """

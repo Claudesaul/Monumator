@@ -8,11 +8,12 @@ Orchestrates data downloads, processing, and Excel generation.
 
 import os
 import time
+import asyncio
 from datetime import datetime
 from config.report_config import SEED_REPORTS
 from utils.downloader import download_seed_report
 from excel_processing.inventory_excel import InventoryExcelProcessor
-from web_automation.product_scraper import download_product_list_with_browser
+from web_automation.items_scraper import ItemsScraper
 import pandas as pd
 
 def get_inventory_adjustment_report_id():
@@ -87,9 +88,9 @@ def download_iad_report(temp_directory="downloads/temp"):
     else:
         raise Exception("Failed to download IAD report")
 
-def download_product_list(temp_directory="downloads/temp"):
+async def download_product_list_async(temp_directory="downloads/temp"):
     """
-    Download product list using browser automation
+    Download product list using async browser automation
     
     Args:
         temp_directory (str): Directory to save downloaded file
@@ -99,14 +100,39 @@ def download_product_list(temp_directory="downloads/temp"):
     """
     print("📥 Downloading product list via browser automation...")
     
-    # Use browser automation to download product list
-    result = download_product_list_with_browser(headless=True)
+    scraper = None
+    try:
+        # Initialize product scraper
+        scraper = ItemsScraper(headless=True)
+        
+        # Setup browser and login
+        if not await scraper.setup_and_login():
+            raise Exception("Failed to setup browser and login to SEED")
+        
+        # Download product list
+        result = await scraper.download_product_list()
+        
+        if result and 'file_path' in result:
+            print(f"✅ Product list downloaded: {result['file_path']}")
+            return result['file_path']
+        else:
+            raise Exception("Failed to download product list")
+            
+    finally:
+        if scraper:
+            await scraper.cleanup_browser()
+
+def download_product_list(temp_directory="downloads/temp"):
+    """
+    Download product list (synchronous wrapper)
     
-    if result['success']:
-        print(f"✅ Product list downloaded: {result['file_path']}")
-        return result['file_path']
-    else:
-        raise Exception(f"Failed to download product list: {result.get('error', 'Unknown error')}")
+    Args:
+        temp_directory (str): Directory to save downloaded file
+        
+    Returns:
+        str: Path to downloaded file
+    """
+    return asyncio.run(download_product_list_async(temp_directory))
 
 def load_iad_data(file_path):
     """
