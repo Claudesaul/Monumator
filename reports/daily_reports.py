@@ -79,7 +79,8 @@ class DailyReportsSystem:
     def inventory_adjustment_submenu(self):
         """Inventory Adjustment sub-menu"""
         options = [
-            "🔄 Process Report (Auto Download)",
+            "🌐 Process Report (Headless)",
+            "👁️ Process Report (Visible)",
             "📅 Check Date Logic",
             "🔙 Back"
         ]
@@ -89,15 +90,17 @@ class DailyReportsSystem:
         while True:
             choice = navigator.navigate()
             
-            if choice == -1 or choice == 2:  # Quit or Back
+            if choice == -1 or choice == 3:  # Quit or Back
                 return
             
-            elif choice == 0:  # Process Report
+            elif choice in [0, 1]:  # Process Report
+                headless = choice == 0
+                mode = "Headless" if headless else "Visible"
+                
                 os.system('cls' if os.name == 'nt' else 'clear')
-                print("🚀 Processing Inventory Adjustment Summary...")
-                print("📋 Auto-downloading IAD data and product list...")
+                print(f"🚀 Processing Inventory Adjustment Summary ({mode})...")
                 try:
-                    results = process_inventory_adjustment_summary()
+                    results = process_inventory_adjustment_summary(headless=headless)
                     if results['success']:
                         print(f"✅ Report completed successfully!")
                         print(f"📁 Output: {results['output_path']}")
@@ -109,7 +112,7 @@ class DailyReportsSystem:
                     print(f"❌ Error: {str(e)}")
                 input("\nPress Enter to continue...")
             
-            elif choice == 1:  # Check Date Logic
+            elif choice == 2:  # Check Date Logic
                 os.system('cls' if os.name == 'nt' else 'clear')
                 print("📅 DATE LOGIC CHECK")
                 print("=" * 40)

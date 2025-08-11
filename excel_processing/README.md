@@ -6,7 +6,7 @@ Handles Excel report generation using templates with openpyxl and xlwings.
 
 - **`base_excel.py`** - Common template management functions
 - **`stockout_excel.py`** - Daily stockout reports (openpyxl)
-- **`inventory_excel.py`** - Inventory adjustment reports (xlwings)
+- **`inventory_adjustment_excel.py`** - Inventory adjustment reports (xlwings)
 - **`inventory_confirmation_excel.py`** - Inventory confirmation reports (xlwings)
 
 ## ⚙️ How It Works
@@ -33,7 +33,7 @@ output_path = processor.generate_stockout_report(data_dict)
 
 ### Inventory Adjustment Report (xlwings)
 ```python
-from excel_processing.inventory_excel import InventoryExcelProcessor
+from excel_processing.inventory_adjustment_excel import InventoryExcelProcessor
 
 processor = InventoryExcelProcessor()
 output_path = processor.generate_inventory_adjustment_report(iad_data_df, product_list_df)

@@ -40,15 +40,12 @@ class ItemsScraper(SeedBrowser):
     
     async def find_and_click_export_button(self) -> Download:
         """Find and click export button"""
-        # Find the "Export Importable Data" button
-        all_buttons = await self.page.locator("button, input").all()
-        for button in all_buttons:
-            text = (await button.text_content() or "").strip()
-            if text == "Export Importable Data":
-                async with self.page.expect_download() as download_info:
-                    await button.click()
-                return await download_info.value
-        raise Exception("Export button not found")
+        # Use the more reliable has-text selector
+        export_button = self.page.locator("button:has-text('Export Importable Data')").first
+        
+        async with self.page.expect_download() as download_info:
+            await export_button.click()
+        return await download_info.value
     
     async def handle_download(self, download: Download) -> str:
         """Handle download and save to temp directory"""
@@ -82,9 +79,9 @@ class ItemsScraper(SeedBrowser):
             except:
                 pass
     
-    async def download_product_list(self) -> str:
+    async def download_items_list(self) -> str:
         """
-        Download product list from ItemImportExport page
+        Download items list from ItemImportExport page
         
         Returns:
             Path to downloaded file

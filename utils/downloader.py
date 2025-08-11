@@ -1,13 +1,15 @@
 """
-SEED API Report Downloader
-==========================
+SEED Report Downloader
+=====================
 
-Downloads reports from SEED API using HTTP requests.
+Downloads reports from SEED via API and web scraping.
+Includes both API-based downloads and browser automation downloads.
 """
 
 import requests
 from base64 import b64encode
 import os
+import asyncio
 from dotenv import load_dotenv
 from config.report_config import SEED_API_HOST, SEED_API_ENDPOINT
 
@@ -48,3 +50,52 @@ def download_seed_report(report_id, filename, download_path=""):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+async def download_items_async(temp_directory="downloads/temp", headless=True):
+    """
+    Download items list using async browser automation
+    
+    Args:
+        temp_directory (str): Directory to save downloaded file
+        headless (bool): Run browser in headless mode
+        
+    Returns:
+        str: Path to downloaded file
+    """
+    from web_automation.items_scraper import ItemsScraper
+    
+    print("📥 Downloading items list via browser automation...")
+    
+    scraper = None
+    try:
+        # Initialize product scraper
+        scraper = ItemsScraper(headless=headless)
+        
+        # Setup browser and login
+        if not await scraper.setup_and_login():
+            raise Exception("Failed to setup browser and login to SEED")
+        
+        # Download items list
+        result = await scraper.download_items_list()
+        
+        if result:
+            print(f"✅ Items list downloaded: {result}")
+            return result
+        else:
+            raise Exception("Failed to download items list")
+            
+    finally:
+        if scraper:
+            await scraper.cleanup_browser()
+
+def download_items(temp_directory="downloads/temp", headless=True):
+    """
+    Download items list (synchronous wrapper)
+    
+    Args:
+        temp_directory (str): Directory to save downloaded file
+        headless (bool): Run browser in headless mode
+        
+    Returns:
+        str: Path to downloaded file
+    """
+    return asyncio.run(download_items_async(temp_directory, headless))
