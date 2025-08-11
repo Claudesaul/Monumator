@@ -26,16 +26,13 @@ async def test_scraper_login():
     try:
         import io
         from contextlib import redirect_stdout, redirect_stderr
-        from web_automation.base_scraper import BaseScraper
         from web_automation.seed_browser import SeedBrowser
         
         # Suppress all output during test
         with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
-            scraper = BaseScraper(headless=True)
-            await scraper.setup_browser()
-            seed = SeedBrowser(scraper.page)
-            result = await seed.login()
-            await scraper.cleanup_browser()
+            seed = SeedBrowser(headless=True)
+            result = await seed.setup_and_login()
+            await seed.cleanup_browser()
             return result
     except:
         return False
