@@ -32,47 +32,33 @@ class InventoryConfirmationScraper(SeedBrowser):
         if not await self.navigate_to_route_summary(target_date):
             raise Exception("Failed to navigate to routes summary")
         
-        # Find all routes with missing inventory by checking table data
         print("🔍 Scanning for routes with missing inventory...")
         
-        # Playwright automatically waits for content - minimal explicit waiting needed
-        
-        # Get all table rows
+        # Get all table rows and find routes with missing inventory
         rows = await self.page.locator("table tr").all()
         routes_with_missing = []
         
         # Check route data rows (starting from row 6 where route data begins)
         for i in range(6, len(rows)):
-            try:
-                row = rows[i]
-                cells = await row.locator("td").all()
-                
-                if len(cells) >= 5:  # Need at least 5 columns (0-4)
-                    # Column 1: Route name
-                    route_name = (await cells[1].text_content() or "").strip()
-                    
-                    # Column 4: Missing inventory count
-                    missing_text = (await cells[4].text_content() or "").strip()
-                    
-                    if route_name.startswith('Rt'):  # Only process actual routes
-                        # Check if missing inventory > 0
-                        missing_count = 0
-                        if missing_text.isdigit():
-                            missing_count = int(missing_text)
-                        
-                        if missing_count > 0:
-                            routes_with_missing.append((route_name, missing_count))
-                            print(f"🔴 Found route with missing inventory: {route_name} ({missing_count} missing)")
-                
-            except Exception as e:
-                print(f"⚠️ Error checking row {i}: {str(e)}")
+            row = rows[i]
+            cells = await row.locator("td").all()
+            
+            if len(cells) < 5:
                 continue
+                
+            route_name = (await cells[1].text_content() or "").strip()
+            missing_text = (await cells[4].text_content() or "").strip()
+            
+            # Only process routes with missing inventory
+            if route_name.startswith('Rt') and missing_text.isdigit():
+                routes_with_missing.append((route_name, int(missing_text)))
+                print(f"🔴 Found: {route_name} ({missing_text} missing)")
         
         print(f"📊 Found {len(routes_with_missing)} routes with missing inventory")
         
         route_data = []
         
-        # Process each route with missing inventory
+        # Process each route
         for route_name, missing_count in routes_with_missing:
             print(f"📋 Processing {route_name}...")
             
@@ -85,48 +71,46 @@ class InventoryConfirmationScraper(SeedBrowser):
             }
             
             try:
-                # Try to find and click the route link
-                # The route names might be clickable in the first column
-                route_link = self.page.locator(f"a:has-text('{route_name}')").first
+                # Click the missing count number in column 4 (5th td, 0-indexed)
+                route_row = self.page.locator(f"tr:has(td:text-is('{route_name}'))")
+                missing_link = route_row.locator("td:nth-child(5) a").first
                 
-                if await route_link.count() == 0:
-                    # If no direct link, try looking in table cells
-                    route_cell = self.page.locator(f"td:has-text('{route_name}') a").first
-                    if await route_cell.count() > 0:
-                        route_link = route_cell
+                # Click the link
+                await missing_link.click()
+                await self.page.wait_for_timeout(2000)
                 
-                if await route_link.count() > 0:
-                    print(f"🔗 Found clickable link for {route_name}")
-                    await route_link.click()
+                # Find rows with YES/NO status
+                yes_no_rows = await self.page.locator("tr:has(td:text-is('YES/NO'))").all()
+                
+                for row in yes_no_rows:
+                    cells = await row.locator("td").all()
+                    if len(cells) < 5:
+                        continue
                     
-                    # Route details page loaded automatically by Playwright
+                    asset_id = (await cells[0].text_content() or "").strip()
+                    location = (await cells[1].text_content() or "").strip()
+                    asset_type = (await cells[2].text_content() or "").strip()
+                    restock_time = (await cells[3].text_content() or "").strip() if len(cells) > 3 else ""
+                    inventory_status = (await cells[4].text_content() or "").strip() if len(cells) > 4 else "YES/NO"
                     
-                    # Extract incomplete assets (excluding FF/STATIC)
-                    asset_rows = await self.page.locator("table tr").all()
+                    # Skip if contains excluded keywords
+                    excluded = ['COFFEE', 'FF', 'STATIC', 'CONDIMENT']
+                    combined_text = f"{asset_id} {asset_type}".upper()
+                    if any(x in combined_text for x in excluded):
+                        continue
                     
-                    for row in asset_rows[1:]:  # Skip header
-                        cells = await row.locator("td").all()
-                        if len(cells) >= 3:
-                            asset_id = (await cells[0].text_content() or "").strip().upper()
-                            location = (await cells[1].text_content() or "").strip()
-                            status = (await cells[2].text_content() or "").strip().lower()
-                            
-                            # Skip FF/STATIC assets and check for missing status
-                            if not any(x in asset_id for x in ['FF', 'STATIC', 'COFFEE', 'CONDIMENTS']):
-                                if 'missing' in status or 'incomplete' in status or 'not done' in status:
-                                    route_info['incomplete_assets'].append({
-                                        'asset_id': asset_id,
-                                        'location': location,
-                                        'status': status
-                                    })
-                    
-                    # Navigate back to summary
-                    await self.page.go_back()
-                    print(f"🔴 {route_name}: {len(route_info['incomplete_assets'])} incomplete assets found")
-                    
-                else:
-                    print(f"⚠️ No clickable link found for {route_name} - route data incomplete")
-                    route_info['status'] = 'No Link Found'
+                    # Track this incomplete asset with all required fields
+                    route_info['incomplete_assets'].append({
+                        'asset_id': asset_id,
+                        'location': location,
+                        'type': asset_type,
+                        'restock_time': restock_time,
+                        'inventory_taken': inventory_status
+                    })
+                
+                # Navigate back
+                await self.page.go_back()
+                print(f"✅ {route_name}: {len(route_info['incomplete_assets'])} incomplete assets found")
                 
             except Exception as e:
                 print(f"❌ Error processing {route_name}: {str(e)}")

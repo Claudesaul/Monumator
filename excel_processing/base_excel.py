@@ -48,7 +48,6 @@ class ExcelProcessorBase:
         
         # Copy template to working location
         shutil.copy2(self.template_path, self.output_path)
-        print(f"📄 Created working copy: {self.output_path}")
         
         return self.output_path
     

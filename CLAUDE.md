@@ -61,10 +61,11 @@ Monumator/
 ├── utils/                     # Utilities (direct imports)
 │   ├── downloader.py          # SEED API downloads with concurrency
 │   └── menu_navigator.py      # Arrow-key menu navigation
+├── reports/                   # Report menu systems (direct imports)
+│   ├── daily_reports.py       # Daily reports sub-menu system
+│   └── weekly_reports.py      # Weekly reports sub-menu system
 ├── templates/                 # Excel template files
-├── main.py                    # Main menu with arrow navigation
-├── daily_reports.py           # Daily reports sub-menu system
-└── weekly_reports.py          # Weekly reports sub-menu system
+└── main.py                    # Main menu with arrow navigation
 ```
 
 ## Core Components
@@ -81,8 +82,8 @@ class MenuNavigator:
 
 **Entry Points:**
 - `main.py` - Main menu (5 options)
-- `daily_reports.py` - Daily reports with sub-menus (6 main options)
-- `weekly_reports.py` - Weekly reports with sub-menus (7 reports + process all)
+- `reports/daily_reports.py` - Daily reports with sub-menus (6 main options)
+- `reports/weekly_reports.py` - Weekly reports with sub-menus (7 reports + process all)
 
 ### 2. Database Integration (`database/`)
 
@@ -218,8 +219,8 @@ LEVEL_CONNECTION = {
 ```
 python main.py
 ┌─ Use ↑↓ arrows to navigate
-├─ 📅 Weekly Reports → weekly_reports.py sub-menu
-├─ 📊 Daily Reports → daily_reports.py sub-menu  
+├─ 📅 Weekly Reports → reports/weekly_reports.py sub-menu
+├─ 📊 Daily Reports → reports/daily_reports.py sub-menu  
 ├─ 📁 Download Directories → Show file organization
 ├─ 🔍 System Status → Quick health check
 └─ 🚪 Exit
@@ -288,7 +289,7 @@ User selects Weekly Sales → Process Report
 
 ### Adding a New Daily Report
 1. **Create workflow file**: `report_workflows/new_daily_report.py`
-2. **Add menu option**: Update `daily_reports.py` 
+2. **Add menu option**: Update `reports/daily_reports.py` 
 3. **Add configuration**: Update `config/report_config.py` if needed
 4. **Create Excel processor**: Add to `excel_processing/` if needed
 

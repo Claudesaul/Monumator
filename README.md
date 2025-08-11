@@ -37,10 +37,11 @@ Monumator/
 ├── utils/                     # Utilities (direct imports)
 │   ├── downloader.py          # SEED API downloads
 │   └── menu_navigator.py      # Arrow-key menu navigation
+├── reports/                   # Report menu systems (direct imports)
+│   ├── daily_reports.py       # Daily reports menu
+│   └── weekly_reports.py      # Weekly reports menu
 ├── templates/                 # Excel templates
-├── main.py                    # Main menu
-├── daily_reports.py           # Daily reports menu
-└── weekly_reports.py          # Weekly reports menu
+└── main.py                    # Main menu
 ```
 
 ## 🛠️ Installation

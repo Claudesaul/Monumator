@@ -9,6 +9,9 @@ import sys
 import os
 import msvcrt
 
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # Import MenuNavigator utility
 from utils.menu_navigator import MenuNavigator
 
@@ -149,17 +152,7 @@ class DailyReportsSystem:
                 os.system('cls' if os.name == 'nt' else 'clear')
                 print(f"🚀 Processing Inventory Confirmation Report ({mode})...")
                 try:
-                    results = process_inventory_confirmation_report(headless=headless)
-                    if results['success']:
-                        print(f"✅ Report completed successfully!")
-                        if 'excel_file' in results:
-                            print(f"📁 Output: {results['excel_file']}")
-                        print(f"🎯 Routes: {results['routes_found']}")
-                        print(f"📊 Assets: {results['assets_processed']}")
-                        if 'elapsed_time' in results:
-                            print(f"⏱️ Time: {results['elapsed_time']:.1f}s")
-                    else:
-                        print(f"❌ Report failed: {results['error']}")
+                    process_inventory_confirmation_report(headless=headless)
                 except Exception as e:
                     print(f"❌ Error: {str(e)}")
                 input("\nPress Enter to continue...")

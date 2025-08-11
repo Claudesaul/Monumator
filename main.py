@@ -8,8 +8,8 @@ Clean, simplified menu system with arrow navigation.
 import sys
 import os
 from utils.menu_navigator import MenuNavigator
-from weekly_reports import main as weekly_reports_main
-from daily_reports import main as daily_reports_main
+from reports.weekly_reports import main as weekly_reports_main
+from reports.daily_reports import main as daily_reports_main
 
 def show_download_directories():
     """Display download directory structure"""

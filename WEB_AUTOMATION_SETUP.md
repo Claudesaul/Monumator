@@ -14,7 +14,7 @@ ProductScraper (product download logic)
     ↓
 report_workflows/ (complete orchestration + Excel)
     ↓
-Menu System (daily_reports.py with headless/visible options)
+Menu System (reports/daily_reports.py with headless/visible options)
 ```
 
 ## 🔧 Core Components
@@ -171,7 +171,7 @@ def generate_inventory_excel()                # Excel with formulas
 ## 🎯 Menu Integration
 
 ### Daily Reports Menu Flow
-From `main.py` → `daily_reports.py` → Workflow functions → Scrapers
+From `main.py` → `reports/daily_reports.py` → Workflow functions → Scrapers
 
 **Menu Structure**:
 ```python
@@ -245,7 +245,7 @@ def process_inventory_confirmation_report(headless=True):
        return asyncio.run(run_new_report_async(headless))
    ```
 
-3. **Add to Menu**: Update `daily_reports.py` with new options
+3. **Add to Menu**: Update `reports/daily_reports.py` with new options
 
 ### Benefits of New Architecture:
 - **No Redundancy**: Login/navigation code exists once in SeedBrowser
@@ -349,7 +349,7 @@ async def run_all_daily_reports_concurrent():
 
 ### Menu Integration Example
 ```python
-# In daily_reports.py
+# In reports/daily_reports.py
 "🎯 Process All Daily Reports"
 ├─ "🚀 Run All Sequentially (Current)"    → existing workflow
 └─ "⚡ Run All Concurrently (Faster)"     → new concurrent workflow

@@ -126,7 +126,7 @@ def get_new_report_status():
 ```
 
 ### Step 2: Add to Menu System
-Update appropriate menu file (e.g., `daily_reports.py`):
+Update appropriate menu file (e.g., `reports/daily_reports.py`):
 ```python
 # Add menu option
 print("11. 🆕 Process New Report")

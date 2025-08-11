@@ -7,6 +7,7 @@ Handles Excel report generation using templates with openpyxl and xlwings.
 - **`base_excel.py`** - Common template management functions
 - **`stockout_excel.py`** - Daily stockout reports (openpyxl)
 - **`inventory_excel.py`** - Inventory adjustment reports (xlwings)
+- **`inventory_confirmation_excel.py`** - Inventory confirmation reports (xlwings)
 
 ## ⚙️ How It Works
 
@@ -30,12 +31,21 @@ data_dict = {
 output_path = processor.generate_stockout_report(data_dict)
 ```
 
-### Inventory Report (xlwings)
+### Inventory Adjustment Report (xlwings)
 ```python
 from excel_processing.inventory_excel import InventoryExcelProcessor
 
 processor = InventoryExcelProcessor()
 output_path = processor.generate_inventory_adjustment_report(iad_data_df, product_list_df)
+```
+
+### Inventory Confirmation Report (xlwings)
+```python
+from excel_processing.inventory_confirmation_excel import InventoryConfirmationProcessor
+
+processor = InventoryConfirmationProcessor()
+route_data = [{'incomplete_assets': [{'asset_id': '123', 'location': 'Market A', ...}]}]
+output_path = processor.generate_report(route_data)
 ```
 
 ## ➕ Adding New Report Processors
@@ -75,6 +85,7 @@ output_path = processor.generate_new_report(data_df)
 Place Excel templates in `templates/` folder:
 - `Daily Stockout Report.xlsx` - 4 sheets for stockout data
 - `Inventory Adjustment Summary.xlsx` - 2 sheets for inventory
+- `Daily Inventory Confirmation.xlsx` - Route asset tracking with UNIQUE formulas
 - Headers in row 1, data starts row 2
 
 ## 📚 Library Choice
