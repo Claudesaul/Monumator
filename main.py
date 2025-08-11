@@ -22,20 +22,33 @@ def show_download_directories():
         print(f"{status} {name.upper()}: {path}")
 
 async def test_scraper_login():
-    """Test SEED login functionality - silent test"""
+    """Test SEED login functionality - returns (success, error_message)"""
     try:
+        from web_automation.seed_browser import SeedBrowser
         import io
         from contextlib import redirect_stdout, redirect_stderr
-        from web_automation.seed_browser import SeedBrowser
         
-        # Suppress all output during test
+        # Check credentials first
+        import os
+        from dotenv import load_dotenv
+        load_dotenv()
+        
+        if not os.getenv('SEED_USERNAME') or not os.getenv('SEED_PASSWORD'):
+            return False, "Missing SEED credentials in environment variables"
+        
+        # Test login with suppressed output
         with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
             seed = SeedBrowser(headless=True)
             result = await seed.setup_and_login()
             await seed.cleanup_browser()
-            return result
-    except:
-        return False
+            
+        if result:
+            return True, None
+        else:
+            return False, "Login failed - check credentials or SEED website availability"
+            
+    except Exception as e:
+        return False, f"Browser setup failed: {str(e)}"
 
 def system_status():
     """Quick system status check"""
@@ -57,13 +70,13 @@ def system_status():
     print("🔍 Testing web scraper...")
     try:
         import asyncio
-        result = asyncio.run(test_scraper_login())
-        if result:
-            print("✅ Web scraper: Working successfully")
+        success, error_msg = asyncio.run(test_scraper_login())
+        if success:
+            print("✅ Web scraper: Login successful")
         else:
-            print("❌ Web scraper: Login failed")
-    except:
-        print("⚠️ Web scraper: Cannot test")
+            print(f"❌ Web scraper: {error_msg}")
+    except Exception as e:
+        print(f"⚠️ Web scraper: Test failed - {str(e)}")
     
     print("✅ System check complete - All systems tested")
 
