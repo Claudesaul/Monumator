@@ -72,13 +72,13 @@ def system_status():
         import asyncio
         success, error_msg = asyncio.run(test_scraper_login())
         if success:
-            print("✅ Web scraper: Login successful")
+            print("✅ Web scraper: Seed Login successful")
         else:
             print(f"❌ Web scraper: {error_msg}")
     except Exception as e:
         print(f"⚠️ Web scraper: Test failed - {str(e)}")
     
-    print("✅ System check complete - All systems tested")
+    print("✅ System check complete - All systems healthy")
 
 def main():
     """Main application entry point"""

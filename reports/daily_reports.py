@@ -101,12 +101,7 @@ class DailyReportsSystem:
                 print(f"🚀 Processing Inventory Adjustment Summary ({mode})...")
                 try:
                     results = process_inventory_adjustment_summary(headless=headless)
-                    if results['success']:
-                        print(f"✅ Report completed successfully!")
-                        print(f"📁 Output: {results['output_path']}")
-                        print(f"📊 Report ID: {results['report_id']} - {results['description']}")
-                        print(f"⏱️ Time: {results['processing_time']:.2f}s")
-                    else:
+                    if not results['success']:
                         print(f"❌ Report failed: {results['error']}")
                 except Exception as e:
                     print(f"❌ Error: {str(e)}")

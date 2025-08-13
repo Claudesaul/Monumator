@@ -37,7 +37,6 @@ class InventoryExcelProcessor(ExcelProcessorBase):
             
             # Open workbook
             self.workbook = self.app.books.open(self.output_path)
-            print(f"📖 Loaded workbook with xlwings: {self.output_path}")
             return self.workbook
         except Exception as e:
             print(f"❌ Failed to load workbook: {str(e)}")
@@ -65,7 +64,6 @@ class InventoryExcelProcessor(ExcelProcessorBase):
                 clear_range = sheet.range(f"{start_row}:{used_range.last_cell.row}")
                 clear_range.clear_contents()
                 
-            print(f"🗑️ Cleared data from sheet '{sheet_name}' starting at row {start_row}")
         except Exception as e:
             print(f"⚠️ Could not clear sheet '{sheet_name}': {str(e)}")
     
@@ -99,7 +97,7 @@ class InventoryExcelProcessor(ExcelProcessorBase):
     
     def copy_formulas_down(self, sheet_name, num_rows):
         """
-        Copy formulas down for the specified number of rows
+        Copy formulas down for the specified number of rows using batch operations
         
         Args:
             sheet_name (str): Name of the sheet
@@ -115,7 +113,7 @@ class InventoryExcelProcessor(ExcelProcessorBase):
         try:
             sheet = self.workbook.sheets[sheet_name]
             
-            # Define formula columns and their formulas (row 2 templates)
+            # Define formula columns and their base formulas
             formula_definitions = {
                 'N': "=-H2",  # Negative of incoming adjustment
                 'O': "=-I2",  # Negative of outgoing adjustment  
@@ -124,17 +122,14 @@ class InventoryExcelProcessor(ExcelProcessorBase):
                 'R': '=IF(Q2<>"",P2*Q2,"")'  # Total value calculation
             }
             
-            # Apply formulas to each row
-            for col_letter, formula_template in formula_definitions.items():
-                for row in range(2, num_rows + 2):  # Start from row 2
-                    # Update formula for current row
-                    formula = formula_template.replace('2', str(row))
-                    if 'XLOOKUP' in formula:
-                        # Keep XLOOKUP formula exactly but update row reference
-                        formula = f'=XLOOKUP(B{row},\'Seed Product List\'!A:A,\'Seed Product List\'!L:L,"")'
-                    
-                    cell_address = f"{col_letter}{row}"
-                    sheet.range(cell_address).formula = formula
+            # Apply formulas using batch operations (one per column)
+            for col_letter, base_formula in formula_definitions.items():
+                end_row = num_rows + 1  # +1 because data starts at row 2
+                range_address = f'{col_letter}2:{col_letter}{end_row}'
+                
+                # Set formula for entire column range at once
+                column_range = sheet.range(range_address)
+                column_range.formula = base_formula
             
             print(f"🔢 Applied formulas to {num_rows} rows in sheet '{sheet_name}'")
             
@@ -148,7 +143,6 @@ class InventoryExcelProcessor(ExcelProcessorBase):
         Args:
             iad_data (pandas.DataFrame): IAD data to insert
         """
-        print("📋 Populating IAD sheet...")
         self.clear_sheet_data("Seed IAD")
         self.insert_dataframe_to_sheet(iad_data, "Seed IAD")
         
@@ -163,7 +157,6 @@ class InventoryExcelProcessor(ExcelProcessorBase):
         Args:
             items_data (pandas.DataFrame): Product list data to insert
         """
-        print("📋 Populating Product List sheet...")
         self.clear_sheet_data("Seed Product List")
         self.insert_dataframe_to_sheet(items_data, "Seed Product List")
     

@@ -70,7 +70,6 @@ def cleanup_temp_files(*file_paths):
         if file_path and os.path.exists(file_path):
             try:
                 os.remove(file_path)
-                print(f"🗑️ Removed temp file: {os.path.basename(file_path)}")
             except Exception as e:
                 print(f"⚠️ Could not remove temp file {file_path}: {str(e)}")
 
@@ -106,13 +105,9 @@ def process_inventory_adjustment_summary(output_directory="downloads/daily", hea
         items_file_path = download_items(headless=headless)
         
         # Step 4: Load and process data
-        print("📊 Loading IAD data...")
         iad_data = pd.read_excel(iad_file_path)
-        print(f"📋 Loaded {len(iad_data)} rows of IAD data")
         
-        print("📊 Loading items data...")
         items_data = pd.read_excel(items_file_path)
-        print(f"📋 Loaded {len(items_data)} rows of items data")
         
         # Clean data (replace NaN with empty strings)
         iad_data = iad_data.fillna('')
@@ -140,8 +135,7 @@ def process_inventory_adjustment_summary(output_directory="downloads/daily", hea
             }
         }
         
-        print(f"✅ Inventory Adjustment Summary completed successfully in {processing_time:.2f} seconds")
-        print(f"📁 Output file: {output_path}")
+        print(f"✅ Inventory Adjustment Summary completed successfully")
         
         return results
         

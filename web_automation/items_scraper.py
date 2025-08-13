@@ -68,7 +68,6 @@ class ItemsScraper(SeedBrowser):
         os.makedirs(temp_dir, exist_ok=True)
         target_path = os.path.join(temp_dir, "ItemImportExample.xlsx")
         shutil.copy2(source_path, target_path)
-        print(f"📁 Copied to: {target_path}")
         return target_path
     
     def cleanup_download_directory(self):
