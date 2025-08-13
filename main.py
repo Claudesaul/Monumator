@@ -54,6 +54,17 @@ def system_status():
     """Quick system status check"""
     print("\n🔍 SYSTEM STATUS")
     print("=" * 40)
+
+    # Level database check
+    print("🔍 Testing Level database connection...")
+    try:
+        from database.connection import test_level_connection
+        if test_level_connection():
+            print("✅ Level Database: Connection established")
+        else:
+            print("❌ Level Database: Connection failed")
+    except:
+        print("⚠️ Level Database: Cannot test")
     
     # LightSpeed database check
     print("🔍 Testing LightSpeed database connection...")
@@ -65,17 +76,6 @@ def system_status():
             print("❌ LightSpeed Database: Connection failed")
     except:
         print("⚠️ LightSpeed Database: Cannot test")
-    
-    # Level database check
-    print("🔍 Testing Level database connection...")
-    try:
-        from database.connection import test_level_connection
-        if test_level_connection():
-            print("✅ Level Database: Connection established")
-        else:
-            print("❌ Level Database: Connection failed")
-    except:
-        print("⚠️ Level Database: Cannot test")
     
     # Scraper check
     print("🔍 Testing web scraper...")
