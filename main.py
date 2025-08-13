@@ -55,16 +55,27 @@ def system_status():
     print("\n🔍 SYSTEM STATUS")
     print("=" * 40)
     
-    # Database check
-    print("🔍 Testing database connection...")
+    # LightSpeed database check
+    print("🔍 Testing LightSpeed database connection...")
     try:
-        from database.connection import test_database_connection
-        if test_database_connection():
-            print("✅ Database: Connection established")
+        from database.connection import test_lightspeed_connection
+        if test_lightspeed_connection():
+            print("✅ LightSpeed Database: Connection established")
         else:
-            print("❌ Database: Connection failed")
+            print("❌ LightSpeed Database: Connection failed")
     except:
-        print("⚠️ Database: Cannot test")
+        print("⚠️ LightSpeed Database: Cannot test")
+    
+    # Level database check
+    print("🔍 Testing Level database connection...")
+    try:
+        from database.connection import test_level_connection
+        if test_level_connection():
+            print("✅ Level Database: Connection established")
+        else:
+            print("❌ Level Database: Connection failed")
+    except:
+        print("⚠️ Level Database: Cannot test")
     
     # Scraper check
     print("🔍 Testing web scraper...")
@@ -78,7 +89,7 @@ def system_status():
     except Exception as e:
         print(f"⚠️ Web scraper: Test failed - {str(e)}")
     
-    print("✅ System check complete - All systems healthy")
+    print("✅ System check complete")
 
 def main():
     """Main application entry point"""

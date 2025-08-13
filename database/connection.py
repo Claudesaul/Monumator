@@ -74,6 +74,38 @@ def execute_query(connection, query, params=None):
     except Exception as e:
         raise
 
+def test_lightspeed_connection():
+    """
+    Test LightSpeed database connection
+    
+    Returns:
+        bool: True if connection successful, False otherwise
+    """
+    try:
+        lightspeed_conn = get_lightspeed_connection()
+        test_query_ls = "SELECT TOP 1 * FROM dbo.ItemView"
+        execute_query(lightspeed_conn, test_query_ls)
+        lightspeed_conn.close()
+        return True
+    except Exception:
+        return False
+
+def test_level_connection():
+    """
+    Test Level database connection
+    
+    Returns:
+        bool: True if connection successful, False otherwise
+    """
+    try:
+        level_conn = get_level_connection()
+        test_query_level = "SELECT TOP 1 * FROM dbo.AreaItemParView"
+        execute_query(level_conn, test_query_level)
+        level_conn.close()
+        return True
+    except Exception:
+        return False
+
 def test_database_connection():
     """
     Test both database connections with debug output
