@@ -7,9 +7,19 @@ Clean, simplified menu system with arrow navigation.
 
 import sys
 import os
+import time
 from utils.menu_navigator import MenuNavigator
 from reports.weekly_reports import main as weekly_reports_main
 from reports.daily_reports import main as daily_reports_main
+
+def goodbye_with_countdown():
+    """Display countdown timer with goodbye message"""
+    for i in range(3, 0, -1):
+        print(f"\n⏰ This window will close in: {i}...")
+        time.sleep(1)
+    print("\n👋 Goodbye!")
+    time.sleep(1)
+    sys.exit(0)
 
 def show_download_directories():
     """Display download directory structure"""
@@ -109,8 +119,7 @@ def main():
             choice = navigator.navigate()
             
             if choice == -1 or choice == 4:  # Quit or Exit
-                print("\n👋 Goodbye!")
-                sys.exit(0)
+                goodbye_with_countdown()
             
             elif choice == 0:  # Weekly Reports
                 weekly_reports_main()
@@ -129,8 +138,7 @@ def main():
                 input("\nPress Enter to continue...")
                 
         except KeyboardInterrupt:
-            print("\n👋 Goodbye!")
-            sys.exit(0)
+            goodbye_with_countdown()
         except Exception as e:
             print(f"\n❌ Error: {str(e)}")
             input("Press Enter to continue...")
