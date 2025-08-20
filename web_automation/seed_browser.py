@@ -18,16 +18,10 @@ class SeedBrowser(BaseScraper):
     """
     
     def __init__(self, headless: bool = True):
-        """
-        Initialize SEED browser manager with browser capabilities
-        
-        Args:
-            headless: Run browser in headless mode
-        """
         super().__init__(headless)
         self.base_url = "https://mycantaloupe.com"
+        self.cluster = None
         
-        # Load environment variables
         load_dotenv()
         self.username = os.getenv('SEED_USERNAME')
         self.password = os.getenv('SEED_PASSWORD')
@@ -36,23 +30,21 @@ class SeedBrowser(BaseScraper):
             raise ValueError("SEED_USERNAME and SEED_PASSWORD must be set in environment variables")
     
     async def login(self) -> bool:
-        """
-        Perform SEED login process
-        
-        Returns:
-            bool: True if login successful
-        """
         try:
-            # Navigate to SEED
             await self.page.goto(self.base_url)
             
-            # Fill credentials and login
             await self.page.fill(".testEmailInput", self.username)
             await self.page.fill(".testPasswordInput", self.password)
             await self.page.click(".testSignInButton")
             
-            # Wait for successful navigation after login
-            await self.page.wait_for_url("**/cs1/Home**")
+            await self.page.wait_for_url("**/cs*/Home**")
+            
+            import re
+            current_url = self.page.url
+            cluster_match = re.search(r'/cs(\d+)/', current_url)
+            if cluster_match:
+                self.cluster = f"cs{cluster_match.group(1)}"
+                print(f"✅ Logged in successfully (cluster: {self.cluster})")
             
             return True
                 
@@ -61,28 +53,17 @@ class SeedBrowser(BaseScraper):
             return False
     
     async def navigate_to_route_summary(self, target_date: str) -> bool:
-        """
-        Navigate to routes summary page for specific date
-        
-        Args:
-            target_date: Date in YYYY-MM-DD format
-            
-        Returns:
-            bool: True if navigation successful
-        """
         try:
-            # Convert YYYY-MM-DD to MM%2FDD%2FYYYY%2000%3A00%3A00 format
             from datetime import datetime
             date_obj = datetime.strptime(target_date, "%Y-%m-%d")
             formatted_date = date_obj.strftime("%m%%2F%d%%2F%Y%%2000%%3A00%%3A00")
             
-            # Construct routes summary URL with properly formatted date
-            routes_url = f"{self.base_url}/cs1/Scheduling/RoutesSummary?ScheduleDateOnly={formatted_date}"
+            cluster = self.cluster or "cs1"
+            routes_url = f"{self.base_url}/{cluster}/Scheduling/RoutesSummary?ScheduleDateOnly={formatted_date}"
             print(f"🧭 Navigating to routes summary for {target_date}")
             
             await self.page.goto(routes_url)
             
-            # Check if we're on the correct page
             if "RoutesSummary" in self.page.url:
                 print("✅ Successfully navigated to routes summary")
                 return True
@@ -95,20 +76,13 @@ class SeedBrowser(BaseScraper):
             return False
     
     async def navigate_to_item_import_export(self) -> bool:
-        """
-        Navigate to Item Import/Export page
-        
-        Returns:
-            bool: True if navigation successful
-        """
         try:
             print("🧭 Navigating to Item Import/Export page...")
             
-            # Direct navigation to ItemImportExport
-            export_url = f"{self.base_url}/cs1/ItemImportExport/"
+            cluster = self.cluster or "cs1"
+            export_url = f"{self.base_url}/{cluster}/ItemImportExport/"
             await self.page.goto(export_url)
             
-            # Check if we're on the correct page
             if "ItemImportExport" in self.page.url:
                 print("✅ Successfully navigated to Item Import/Export")
                 return True
@@ -157,19 +131,11 @@ class SeedBrowser(BaseScraper):
             return None
     
     async def check_logged_in(self) -> bool:
-        """
-        Check if user is currently logged in to SEED
-        
-        Returns:
-            bool: True if logged in
-        """
         try:
             current_url = self.page.url
             
-            # Check URL for indicators of being logged in
             if "mycantaloupe.com" in current_url and "login" not in current_url.lower():
-                # Check for common logged-in indicators
-                if "dashboard" in current_url or "Reports" in current_url or "cs4" in current_url:
+                if "dashboard" in current_url or "Reports" in current_url or "/cs" in current_url:
                     return True
             return False
                 
@@ -177,15 +143,13 @@ class SeedBrowser(BaseScraper):
             return False
     
     async def setup_and_login(self) -> bool:
-        """
-        Setup browser and login to SEED in one call
-        
-        Returns:
-            bool: True if successful
-        """
         try:
             await self.setup_browser()
             return await self.login()
         except Exception as e:
             print(f"❌ Setup and login failed: {str(e)}")
             return False
+    
+    def get_cluster_url(self, path: str) -> str:
+        cluster = self.cluster or "cs1"
+        return f"{self.base_url}/{cluster}/{path.lstrip('/')}"

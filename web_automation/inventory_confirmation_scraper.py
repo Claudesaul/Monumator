@@ -72,7 +72,8 @@ class InventoryConfirmationScraper(SeedBrowser):
             
             try:
                 # Click the missing count number in column 4 (5th td, 0-indexed)
-                route_row = self.page.locator(f"tr:has(td:text-is('{route_name}'))")
+                route_name_clean = ' '.join(route_name.split())
+                route_row = self.page.locator(f"tr:has(td:has-text('{route_name_clean}'))")
                 missing_link = route_row.locator("td:nth-child(5) a").first
                 
                 # Click the link
