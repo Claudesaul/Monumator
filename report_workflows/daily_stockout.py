@@ -8,7 +8,7 @@ Orchestrates database queries and Excel generation.
 
 import time
 from datetime import datetime
-from database.queries import execute_all_queries, get_sample_data
+from database.queries import execute_all_queries
 from database.connection import test_database_connection
 from excel_processing.stockout_excel import StockoutExcelProcessor
 
@@ -19,8 +19,6 @@ def validate_prerequisites():
     Returns:
         dict: Validation results
     """
-    print("🔍 Validating prerequisites...")
-    
     validation_results = {
         'database_connected': False,
         'all_valid': False
@@ -32,29 +30,19 @@ def validate_prerequisites():
     # Overall validation
     validation_results['all_valid'] = validation_results['database_connected']
     
-    if validation_results['all_valid']:
-        print("✅ All prerequisites validated")
-    else:
-        print("❌ Prerequisites validation failed")
+    if not validation_results['all_valid']:
+        print("❌ Database connection failed")
     
     return validation_results
 
-def fetch_stockout_data(use_sample_data=False):
+def fetch_stockout_data():
     """
-    Fetch data for stockout report
-    
-    Args:
-        use_sample_data (bool): Use sample data instead of database
+    Fetch data for stockout report from database
         
     Returns:
         dict: Dictionary containing all query results
     """
-    if use_sample_data:
-        print("📊 Using sample data for testing")
-        return get_sample_data()
-    else:
-        print("📊 Fetching data from database...")
-        return execute_all_queries()
+    return execute_all_queries()
 
 def process_stockout_data(raw_data):
     """
@@ -66,7 +54,7 @@ def process_stockout_data(raw_data):
     Returns:
         dict: Processed and validated data
     """
-    print("🔄 Processing stockout data...")
+    print("🔄 Processing data...")
     
     processed_data = {}
     
@@ -75,9 +63,9 @@ def process_stockout_data(raw_data):
             # Basic data cleaning
             cleaned_data = data.fillna('')  # Replace NaN with empty strings
             processed_data[sheet_name] = cleaned_data
-            print(f"📋 {sheet_name}: {len(cleaned_data)} rows processed")
         else:
-            print(f"⚠️ No data for {sheet_name}")
+            if sheet_name in ['null_orders', 'ocs']:
+                print(f"⚠️ No data for {sheet_name}")
             processed_data[sheet_name] = data
     
     return processed_data
@@ -101,14 +89,15 @@ def generate_stockout_excel(data_dict, output_directory="downloads/daily"):
     # Generate report
     output_path = excel_processor.generate_stockout_report(data_dict, output_directory)
     
+    print(f"💾 Saved: {output_path}")
+    
     return output_path
 
-def process_stockout_report(use_sample_data=False, output_directory="downloads/daily"):
+def process_stockout_report(output_directory="downloads/daily"):
     """
     Complete workflow for processing Daily Stockout Report
     
     Args:
-        use_sample_data (bool): Use sample data for testing
         output_directory (str): Directory to save the report
         
     Returns:
@@ -117,18 +106,15 @@ def process_stockout_report(use_sample_data=False, output_directory="downloads/d
     start_time = time.time()
     
     try:
-        print("🚀 Starting Daily Stockout Report processing...")
-        
         # Step 1: Validate prerequisites
         validation = validate_prerequisites()
         
-        if not validation['all_valid'] and not use_sample_data:
+        if not validation['all_valid']:
             if not validation['database_connected']:
-                print("⚠️ Database not available, switching to sample data")
-                use_sample_data = True
+                raise Exception("Database connection failed - cannot generate report")
         
         # Step 2: Fetch data
-        raw_data = fetch_stockout_data(use_sample_data)
+        raw_data = fetch_stockout_data()
         
         if not raw_data:
             raise Exception("No data retrieved")
@@ -153,12 +139,10 @@ def process_stockout_report(use_sample_data=False, output_directory="downloads/d
                 'null_orders': len(processed_data.get('null_orders', [])),
                 'ocs': len(processed_data.get('ocs', []))
             },
-            'used_sample_data': use_sample_data,
             'validation': validation
         }
         
-        print(f"✅ Daily Stockout Report completed successfully in {processing_time:.2f} seconds")
-        print(f"📁 Output file: {output_path}")
+        print(f"✅ Report completed successfully ({processing_time:.1f}s)")
         
         return results
         
@@ -169,8 +153,7 @@ def process_stockout_report(use_sample_data=False, output_directory="downloads/d
         return {
             'success': False,
             'error': str(e),
-            'processing_time': processing_time,
-            'used_sample_data': use_sample_data
+            'processing_time': processing_time
         }
 
 def get_stockout_processing_status():

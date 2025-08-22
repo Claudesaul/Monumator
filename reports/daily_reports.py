@@ -27,7 +27,6 @@ class DailyReportsSystem:
             "📈 Daily Stockout Report",
             "📋 Inventory Adjustment Summary", 
             "🌐 Inventory Confirmation Report",
-            "🔗 Test Database Connection",
             "🔙 Back to Main Menu"
         ]
     
@@ -35,7 +34,6 @@ class DailyReportsSystem:
         """Daily Stockout Report sub-menu"""
         options = [
             "🔄 Process Report",
-            "📊 Use Sample Data (Testing)",
             "🔙 Back"
         ]
         
@@ -44,34 +42,15 @@ class DailyReportsSystem:
         while True:
             choice = navigator.navigate()
             
-            if choice == -1 or choice == 2:  # Quit or Back
+            if choice == -1 or choice == 1:  # Quit or Back
                 return
             
             elif choice == 0:  # Process Report
                 os.system('cls' if os.name == 'nt' else 'clear')
-                print("🚀 Processing Daily Stockout Report...")
                 try:
-                    results = process_stockout_report(use_sample_data=False)
-                    if results['success']:
-                        print(f"✅ Report completed successfully!")
-                        print(f"📁 Output: {results['output_path']}")
-                        print(f"⏱️ Time: {results['processing_time']:.2f}s")
-                    else:
+                    results = process_stockout_report()
+                    if not results['success']:
                         print(f"❌ Report failed: {results['error']}")
-                except Exception as e:
-                    print(f"❌ Error: {str(e)}")
-                input("\nPress Enter to continue...")
-            
-            elif choice == 1:  # Use Sample Data
-                os.system('cls' if os.name == 'nt' else 'clear')
-                print("🧪 Processing with Sample Data...")
-                try:
-                    results = process_stockout_report(use_sample_data=True)
-                    if results['success']:
-                        print(f"✅ Test report completed!")
-                        print(f"📁 Output: {results['output_path']}")
-                    else:
-                        print(f"❌ Test failed: {results['error']}")
                 except Exception as e:
                     print(f"❌ Error: {str(e)}")
                 input("\nPress Enter to continue...")
@@ -155,26 +134,6 @@ class DailyReportsSystem:
                     print(f"❌ Error: {str(e)}")
                 input("\nPress Enter to continue...")
     
-    def test_database(self):
-        """Test database connection"""
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("🔍 TESTING DATABASE CONNECTION")
-        print("=" * 40)
-        
-        try:
-            from database.connection import test_database_connection
-            print("Connecting to database...")
-            
-            if test_database_connection():
-                print("✅ Connection established")
-                print("✅ Test query successful") 
-            else:
-                print("❌ Connection failed")
-                
-        except Exception as e:
-            print(f"❌ Error: {str(e)}")
-        
-        input("\nPress Enter to continue...")
     
     def main_menu(self):
         """Main daily reports menu"""
@@ -183,7 +142,7 @@ class DailyReportsSystem:
         while True:
             choice = navigator.navigate()
             
-            if choice == -1 or choice == 4:  # Quit or Back
+            if choice == -1 or choice == 3:  # Quit or Back
                 return
             
             elif choice == 0:  # Daily Stockout Report
@@ -194,9 +153,6 @@ class DailyReportsSystem:
             
             elif choice == 2:  # Inventory Confirmation Report
                 self.inventory_confirmation_submenu()
-            
-            elif choice == 3:  # Test Database Connection
-                self.test_database()
 
 def main():
     """Entry point for daily reports system"""

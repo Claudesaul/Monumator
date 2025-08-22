@@ -107,8 +107,7 @@ def main():
     options = [
         "📅 Weekly Reports",
         "📊 Daily Reports", 
-        "📁 Download Directories",
-        "🔍 System Status",
+        "🔍 System Status Check",
         "🚪 Exit"
     ]
     
@@ -118,7 +117,7 @@ def main():
         try:
             choice = navigator.navigate()
             
-            if choice == -1 or choice == 4:  # Quit or Exit
+            if choice == -1 or choice == 3:  # Quit or Exit
                 goodbye_with_countdown()
             
             elif choice == 0:  # Weekly Reports
@@ -127,12 +126,7 @@ def main():
             elif choice == 1:  # Daily Reports
                 daily_reports_main()
             
-            elif choice == 2:  # Download Directories
-                os.system('cls' if os.name == 'nt' else 'clear')
-                show_download_directories()
-                input("\nPress Enter to continue...")
-            
-            elif choice == 3:  # System Status
+            elif choice == 2:  # System Status Check
                 os.system('cls' if os.name == 'nt' else 'clear')
                 system_status()
                 input("\nPress Enter to continue...")

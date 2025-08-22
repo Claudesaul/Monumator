@@ -2,93 +2,134 @@
 Database Queries for Stockout Reports
 =====================================
 
-All SQL queries and data processing for daily stockout reports.
-Handles dual-database queries and pandas processing.
+All SQL queries for daily stockout reports using direct SQL processing.
+Simplified to use SQL for all logic instead of pandas post-processing.
 """
 
 import pandas as pd
+import warnings
 from datetime import datetime
-from .connection import get_lightspeed_connection, get_level_connection, execute_query
+from .connection import get_lightspeed_connection, execute_query
 
 def get_highlights_data():
     """
-    Execute the Highlights query to get stockout summary data
-    Uses dual database connections: LightSpeed for ItemView, Level for AreaItemParView
+    Execute the Highlights query with all logic in SQL
     
     Returns:
         pandas.DataFrame: Highlights data with stockout information
     """
-    today = datetime.now().date()
-    itemview_query = f"""
+    query = """
+    WITH MergedData AS (
+        SELECT 
+            iv.product,
+            iv.locID,
+            iv.machineBarcode,
+            iv.coil,
+            iv.quantity,
+            iv.updatedQuantity,
+            ap.currentQty
+        FROM ItemView iv
+        INNER JOIN Level.dbo.AreaItemParView ap 
+            ON LTRIM(RTRIM(iv.product)) = LTRIM(RTRIM(ap.itemName))
+        WHERE iv.orderDate = CAST(GETDATE() AS DATE)
+            AND ap.itemActive = 1
+            AND iv.quantity != iv.updatedQuantity
+    )
     SELECT 
-        product, locID, machineBarcode, coil, quantity, updatedQuantity
-    FROM dbo.ItemView 
-    WHERE orderDate = '{today}'
-    """
-    
-    areaitem_query = """
-    SELECT 
-        itemName, currentQty, itemActive
-    FROM dbo.AreaItemParView
+        product,
+        COUNT(*) as numAccounts,
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN quantity END), 0) as singlesOrdered,
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN updatedQuantity END), 0) as singlesPicked,
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN quantity END), 0) as casesOrdered,
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN updatedQuantity END), 0) as casesPicked,
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN updatedQuantity END), 0) - 
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN quantity END), 0) as singlesDiff,
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN updatedQuantity END), 0) - 
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN quantity END), 0) as casesDiff,
+        MAX(currentQty) as currentQty,
+        SUM(CASE WHEN locID = 'OCS' OR LEFT(machineBarcode, 3) = 'OCS' THEN 1 ELSE 0 END) as numOCS,
+        SUM(CASE WHEN locID != 'OCS' AND LEFT(machineBarcode, 3) != 'OCS' THEN 1 ELSE 0 END) as numMarkets
+    FROM MergedData
+    GROUP BY product
+    HAVING (ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN updatedQuantity END), 0) < 
+            ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN quantity END), 0))
+        OR (ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN updatedQuantity END), 0) < 
+            ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN quantity END), 0))
+    ORDER BY 
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN updatedQuantity END), 0) - 
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN quantity END), 0),
+        product
     """
     
     try:
-        # Get data from both databases
         lightspeed_conn = get_lightspeed_connection()
-        df_items = execute_query(lightspeed_conn, itemview_query)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            df = pd.read_sql(query, lightspeed_conn)
         lightspeed_conn.close()
         
-        level_conn = get_level_connection()
-        df_area = execute_query(level_conn, areaitem_query)
-        level_conn.close()
-        
-        # Merge and process
-        df_merged = df_items.merge(df_area, left_on='product', right_on='itemName', how='inner')
-        df_merged = df_merged[df_merged['itemActive'] == True]
-        df_processed = _process_highlights_data(df_merged)
-        
-        print(f"Highlights query completed - {len(df_processed)} stockout items found")
-        return df_processed
+        return df
     except Exception as e:
         print(f"Highlights query failed: {str(e)}")
         raise
 
 def get_markets_data():
     """
-    Execute the Markets query to get market-specific stockout data
+    Execute the Markets query with all logic in SQL
     
     Returns:
         pandas.DataFrame: Markets data with location-specific stockout information
     """
-    today = datetime.now().date()
-    itemview_query = f"""
+    query = """
+    WITH MergedData AS (
+        SELECT 
+            iv.providerName,
+            iv.locDescription,
+            iv.machineBarcode as pogName,
+            iv.product,
+            iv.coil,
+            iv.quantity,
+            iv.updatedQuantity,
+            ap.currentQty
+        FROM ItemView iv
+        INNER JOIN Level.dbo.AreaItemParView ap 
+            ON LTRIM(RTRIM(iv.product)) = LTRIM(RTRIM(ap.itemName))
+        WHERE iv.orderDate = CAST(GETDATE() AS DATE)
+            AND ap.itemActive = 1
+            AND iv.locID != 'OCS'
+    )
     SELECT 
-        providerName, locDescription, machineBarcode, product, coil, quantity, updatedQuantity
-    FROM dbo.ItemView 
-    WHERE orderDate = '{today}' AND locID <> 'OCS'
-    """
-    
-    areaitem_query = """
-    SELECT 
-        itemName, currentQty, itemActive
-    FROM dbo.AreaItemParView
+        providerName,
+        locDescription,
+        pogName,
+        product,
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN quantity END), 0) as singlesOrdered,
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN updatedQuantity END), 0) as singlesPicked,
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN quantity END), 0) as casesOrdered,
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN updatedQuantity END), 0) as casesPicked,
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN updatedQuantity END), 0) - 
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN quantity END), 0) as singlesDiff,
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN updatedQuantity END), 0) - 
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN quantity END), 0) as casesDiff,
+        MAX(currentQty) as currentQty
+    FROM MergedData
+    WHERE providerName = 'Seed'
+    GROUP BY providerName, locDescription, pogName, product
+    HAVING (ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN updatedQuantity END), 0) - 
+            ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN quantity END), 0) < 0)
+        OR (ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN updatedQuantity END), 0) - 
+            ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN quantity END), 0) < 0)
+    ORDER BY pogName, product
     """
     
     try:
         lightspeed_conn = get_lightspeed_connection()
-        df_items = execute_query(lightspeed_conn, itemview_query)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            df = pd.read_sql(query, lightspeed_conn)
         lightspeed_conn.close()
         
-        level_conn = get_level_connection()
-        df_area = execute_query(level_conn, areaitem_query)
-        level_conn.close()
-        
-        df_merged = df_items.merge(df_area, left_on='product', right_on='itemName', how='inner')
-        df_merged = df_merged[df_merged['itemActive'] == True]
-        df_processed = _process_markets_data(df_merged)
-        
-        print(f"Markets query completed - {len(df_processed)} market stockout items found")
-        return df_processed
+        return df
     except Exception as e:
         print(f"Markets query failed: {str(e)}")
         raise
@@ -100,18 +141,27 @@ def get_null_orders_data():
     Returns:
         pandas.DataFrame: Null orders data
     """
-    today = datetime.now().date()
-    query = f"""
-    SELECT locDescription AS location, machineBarcode AS assetID, product, quantity, updatedQuantity
-    FROM dbo.ItemView
-    WHERE orderDate = '{today}' AND quantity > 0 AND updatedQuantity IS NULL AND statusId > 0
+    query = """
+    SELECT 
+        locDescription AS location,
+        machineBarcode AS assetID,
+        product,
+        quantity,
+        updatedQuantity
+    FROM ItemView
+    WHERE orderDate = CAST(GETDATE() AS DATE)
+        AND quantity > 0 
+        AND updatedQuantity IS NULL 
+        AND statusId > 0
     """
     
     try:
         lightspeed_conn = get_lightspeed_connection()
-        df = execute_query(lightspeed_conn, query)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            df = pd.read_sql(query, lightspeed_conn)
         lightspeed_conn.close()
-        print(f"NullOrders query completed - {len(df)} null orders found")
+        
         return df
     except Exception as e:
         print(f"NullOrders query failed: {str(e)}")
@@ -119,40 +169,58 @@ def get_null_orders_data():
 
 def get_ocs_data():
     """
-    Execute the OCS query to get OCS-specific stockout data
+    Execute the OCS query with all logic in SQL
     
     Returns:
         pandas.DataFrame: OCS data with OCS-specific stockout information
     """
-    today = datetime.now().date()
-    itemview_query = f"""
+    query = """
+    WITH MergedData AS (
+        SELECT 
+            iv.cusDescription as vendsysName,
+            iv.locDescription as seedName,
+            iv.product,
+            iv.coil,
+            iv.quantity,
+            iv.updatedQuantity,
+            ap.currentQty
+        FROM ItemView iv
+        INNER JOIN Level.dbo.AreaItemParView ap 
+            ON LTRIM(RTRIM(iv.product)) = LTRIM(RTRIM(ap.itemName))
+        WHERE iv.orderDate = CAST(GETDATE() AS DATE)
+            AND ap.itemActive = 1
+            AND (iv.locID = 'OCS' OR LEFT(iv.machineBarcode, 3) = 'OCS')
+    )
     SELECT 
-        cusDescription, locDescription, product, coil, quantity, updatedQuantity, machineBarcode
-    FROM dbo.ItemView 
-    WHERE orderDate = '{today}' AND (locID = 'OCS' OR LEFT(machineBarcode, 3) = 'OCS')
-    """
-    
-    areaitem_query = """
-    SELECT 
-        itemName, currentQty, itemActive
-    FROM dbo.AreaItemParView
+        vendsysName,
+        seedName,
+        product,
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN quantity END), 0) as singlesOrdered,
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN updatedQuantity END), 0) as singlesPicked,
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN quantity END), 0) as casesOrdered,
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN updatedQuantity END), 0) as casesPicked,
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN updatedQuantity END), 0) - 
+        ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN quantity END), 0) as singlesDiff,
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN updatedQuantity END), 0) - 
+        ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN quantity END), 0) as casesDiff,
+        MAX(currentQty) as currentQty
+    FROM MergedData
+    GROUP BY vendsysName, seedName, product
+    HAVING (ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN updatedQuantity END), 0) - 
+            ISNULL(SUM(CASE WHEN coil != 'DeliveryCase' THEN quantity END), 0) < 0)
+        OR (ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN updatedQuantity END), 0) - 
+            ISNULL(SUM(CASE WHEN coil = 'DeliveryCase' THEN quantity END), 0) < 0)
+    ORDER BY vendsysName, seedName, product
     """
     
     try:
         lightspeed_conn = get_lightspeed_connection()
-        df_items = execute_query(lightspeed_conn, itemview_query)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            df = pd.read_sql(query, lightspeed_conn)
         lightspeed_conn.close()
         
-        level_conn = get_level_connection()
-        df_area = execute_query(level_conn, areaitem_query)
-        level_conn.close()
-        
-        df_merged = df_items.merge(df_area, left_on='product', right_on='itemName', how='inner')
-        df_merged = df_merged[df_merged['itemActive'] == True]
-        df_processed = _process_ocs_data(df_merged)
-        
-        print(f"OCS query completed - {len(df_processed)} OCS stockout items found")
-        return df_processed
+        return df
     except Exception as e:
         print(f"OCS query failed: {str(e)}")
         raise
@@ -164,169 +232,22 @@ def execute_all_queries():
     Returns:
         dict: Dictionary containing all query results
     """
-    print("Executing all Lightspeed queries...")
-    
     results = {}
     try:
+        print("🔍 Querying database...")
+        
         results['highlights'] = get_highlights_data()
         results['markets'] = get_markets_data()
         results['null_orders'] = get_null_orders_data()
         results['ocs'] = get_ocs_data()
         
-        total_rows = sum(len(df) for df in results.values())
-        print(f"All queries completed successfully - {total_rows} total rows retrieved")
+        # Log summary of what we found
+        highlights_count = len(results['highlights']) if not results['highlights'].empty else 0
+        markets_count = len(results['markets']) if not results['markets'].empty else 0
+        
+        print(f"📊 Found {highlights_count} stockout items, {markets_count} affected markets")
+        
         return results
     except Exception as e:
         print(f"Query execution failed: {str(e)}")
         raise
-
-def get_sample_data():
-    """Get sample data for testing when database is not available"""
-    print("Using sample data for testing")
-    
-    highlights_data = {
-        'product': ['Coke 12oz', 'Pepsi 16oz', 'Snickers Bar'],
-        'numAccounts': [5, 3, 8],
-        'singlesOrdered': [50, 30, 80],
-        'singlesPicked': [45, 25, 75],
-        'casesOrdered': [10, 5, 15],
-        'casesPicked': [8, 4, 12],
-        'singlesDiff': [-5, -5, -5],
-        'casesDiff': [-2, -1, -3],
-        'currentQty': [100, 75, 200],
-        'numOCS': [2, 1, 3],
-        'numMarkets': [3, 2, 5]
-    }
-    
-    markets_data = {
-        'providerName': ['Seed', 'Seed', 'Seed'],
-        'locDescription': ['Market A', 'Market B', 'Market C'],
-        'pogName': ['POG001', 'POG002', 'POG003'],
-        'product': ['Coke 12oz', 'Pepsi 16oz', 'Snickers Bar'],
-        'singlesOrdered': [20, 15, 25],
-        'singlesPicked': [18, 12, 22],
-        'casesOrdered': [4, 3, 5],
-        'casesPicked': [3, 2, 4],
-        'singlesDiff': [-2, -3, -3],
-        'casesDiff': [-1, -1, -1],
-        'currentQty': [50, 40, 60]
-    }
-    
-    null_orders_data = {
-        'location': ['Market A', 'Market B'],
-        'assetID': ['ASSET001', 'ASSET002'],
-        'product': ['Coke 12oz', 'Pepsi 16oz'],
-        'quantity': [10, 15],
-        'updatedQuantity': [None, None]
-    }
-    
-    ocs_data = {
-        'vendsysName': ['VendSys A', 'VendSys B'],
-        'seedName': ['OCS Location 1', 'OCS Location 2'],
-        'product': ['Coke 12oz', 'Pepsi 16oz'],
-        'singlesOrdered': [30, 25],
-        'singlesPicked': [25, 20],
-        'casesOrdered': [6, 5],
-        'casesPicked': [5, 4],
-        'singlesDiff': [-5, -5],
-        'casesDiff': [-1, -1],
-        'currentQty': [80, 70]
-    }
-    
-    return {
-        'highlights': pd.DataFrame(highlights_data),
-        'markets': pd.DataFrame(markets_data),
-        'null_orders': pd.DataFrame(null_orders_data),
-        'ocs': pd.DataFrame(ocs_data)
-    }
-
-# Helper functions for data processing
-def _process_highlights_data(df):
-    """Process merged data to replicate Access Highlights query logic"""
-    df_diff = df[
-        (df['quantity'] != df['updatedQuantity']) & 
-        (df['updatedQuantity'].notna())
-    ].copy()
-    
-    if df_diff.empty:
-        return pd.DataFrame()
-    
-    def calculate_highlights_stats(group):
-        return pd.Series({
-            'numAccounts': len(group),
-            'singlesOrdered': group[group['coil'] != 'DeliveryCase']['quantity'].sum(),
-            'singlesPicked': group[group['coil'] != 'DeliveryCase']['updatedQuantity'].sum(),
-            'casesOrdered': group[group['coil'] == 'DeliveryCase']['quantity'].sum(),
-            'casesPicked': group[group['coil'] == 'DeliveryCase']['updatedQuantity'].sum(),
-            'currentQty': group['currentQty'].max(),
-            'numOCS': ((group['locID'] == 'OCS') | (group['machineBarcode'].astype(str).str.startswith('OCS'))).sum(),
-            'numMarkets': ((group['locID'] != 'OCS') & (~group['machineBarcode'].astype(str).str.startswith('OCS'))).sum()
-        })
-    
-    grouped = df_diff.groupby('product').apply(calculate_highlights_stats).reset_index()
-    grouped['singlesDiff'] = grouped['singlesPicked'] - grouped['singlesOrdered']
-    grouped['casesDiff'] = grouped['casesPicked'] - grouped['casesOrdered']
-    
-    stockouts = grouped[(grouped['singlesPicked'] < grouped['singlesOrdered']) | 
-                       (grouped['casesPicked'] < grouped['casesOrdered'])]
-    
-    column_order = [
-        'product', 'numAccounts', 'singlesOrdered', 'singlesPicked', 
-        'casesOrdered', 'casesPicked', 'singlesDiff', 'casesDiff', 
-        'currentQty', 'numOCS', 'numMarkets'
-    ]
-    stockouts = stockouts[column_order]
-    return stockouts.sort_values(['singlesDiff', 'product'])
-
-def _process_markets_data(df):
-    """Process merged data to replicate Access Markets query logic"""
-    def calculate_markets_stats(group):
-        return pd.Series({
-            'singlesOrdered': group[group['coil'] != 'DeliveryCase']['quantity'].sum(),
-            'singlesPicked': group[group['coil'] != 'DeliveryCase']['updatedQuantity'].sum(),
-            'casesOrdered': group[group['coil'] == 'DeliveryCase']['quantity'].sum(),
-            'casesPicked': group[group['coil'] == 'DeliveryCase']['updatedQuantity'].sum(),
-            'currentQty': group['currentQty'].max()
-        })
-    
-    grouped = df.groupby(['locDescription', 'providerName', 'machineBarcode', 'product']).apply(calculate_markets_stats).reset_index()
-    grouped = grouped.rename(columns={'machineBarcode': 'pogName'})
-    grouped['singlesDiff'] = grouped['singlesPicked'] - grouped['singlesOrdered']
-    grouped['casesDiff'] = grouped['casesPicked'] - grouped['casesOrdered']
-    
-    stockouts = grouped[(grouped['providerName'] == 'Seed') & 
-                       ((grouped['singlesDiff'] < 0) | (grouped['casesDiff'] < 0))]
-    
-    column_order = [
-        'providerName', 'locDescription', 'pogName', 'product',
-        'singlesOrdered', 'singlesPicked', 'casesOrdered', 'casesPicked',
-        'singlesDiff', 'casesDiff', 'currentQty'
-    ]
-    stockouts = stockouts[column_order]
-    return stockouts.sort_values(['pogName', 'product'])
-
-def _process_ocs_data(df):
-    """Process merged data to replicate Access OCS query logic"""
-    def calculate_ocs_stats(group):
-        return pd.Series({
-            'singlesOrdered': group[group['coil'] != 'DeliveryCase']['quantity'].sum(),
-            'singlesPicked': group[group['coil'] != 'DeliveryCase']['updatedQuantity'].sum(),
-            'casesOrdered': group[group['coil'] == 'DeliveryCase']['quantity'].sum(),
-            'casesPicked': group[group['coil'] == 'DeliveryCase']['updatedQuantity'].sum(),
-            'currentQty': group['currentQty'].max()
-        })
-    
-    grouped = df.groupby(['cusDescription', 'locDescription', 'product']).apply(calculate_ocs_stats).reset_index()
-    grouped = grouped.rename(columns={'cusDescription': 'vendsysName', 'locDescription': 'seedName'})
-    grouped['singlesDiff'] = grouped['singlesPicked'] - grouped['singlesOrdered']
-    grouped['casesDiff'] = grouped['casesPicked'] - grouped['casesOrdered']
-    
-    stockouts = grouped[(grouped['singlesDiff'] < 0) | (grouped['casesDiff'] < 0)]
-    
-    column_order = [
-        'vendsysName', 'seedName', 'product', 'singlesOrdered',
-        'singlesPicked', 'casesOrdered', 'casesPicked', 'singlesDiff',
-        'casesDiff', 'currentQty'
-    ]
-    stockouts = stockouts[column_order]
-    return stockouts.sort_values(['vendsysName', 'seedName', 'product'])
