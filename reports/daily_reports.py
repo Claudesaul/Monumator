@@ -27,6 +27,8 @@ class DailyReportsSystem:
             "📈 Daily Stockout Report",
             "📋 Inventory Adjustment Summary", 
             "🌐 Inventory Confirmation Report",
+            "🎯 Process All Daily Reports (Sequential)",
+            "⚡ Process All Daily Reports (Concurrent)",
             "🔙 Back to Main Menu"
         ]
     
@@ -158,6 +160,54 @@ class DailyReportsSystem:
                 
                 input("\nPress Enter to continue...")
     
+    def process_all_daily_reports(self):
+        """Process all daily reports sequentially"""
+        os.system('cls' if os.name == 'nt' else 'clear')
+        
+        reports = [
+            ("Daily Stockout Report", lambda: process_stockout_report()),
+            ("Inventory Adjustment Summary", lambda: process_inventory_adjustment_summary(headless=True)),
+            ("Inventory Confirmation Report", lambda: process_inventory_confirmation_report(headless=True))
+        ]
+        
+        total_reports = len(reports)
+        successful_reports = 0
+        failed_reports = []
+        
+        print("🎯 PROCESSING ALL DAILY REPORTS")
+        print("=" * 50)
+        print()
+        
+        for i, (report_name, report_function) in enumerate(reports, 1):
+            print(f"📊 REPORT {i}/{total_reports}: {report_name}")
+            print("-" * 40)
+            
+            try:
+                results = report_function()
+                if results and results.get('success', True):
+                    successful_reports += 1
+                else:
+                    failed_reports.append(report_name)
+            except Exception as e:
+                failed_reports.append(report_name)
+            
+            print()
+        
+        # Final summary
+        print("🏁 FINAL SUMMARY")
+        print("=" * 50)
+        print(f"✅ Successful reports: {successful_reports}/{total_reports}")
+        
+        if failed_reports:
+            print(f"❌ Failed reports: {len(failed_reports)}/{total_reports}")
+            print("Failed reports:")
+            for report in failed_reports:
+                print(f"   • {report}")
+        else:
+            print("🎉 All reports completed successfully!")
+        
+        print()
+        input("Press Enter to continue...")
     
     def main_menu(self):
         """Main daily reports menu"""
@@ -166,7 +216,7 @@ class DailyReportsSystem:
         while True:
             choice = navigator.navigate()
             
-            if choice == -1 or choice == 3:  # Quit or Back
+            if choice == -1 or choice == 5:  # Quit or Back
                 return
             
             elif choice == 0:  # Daily Stockout Report
@@ -177,6 +227,18 @@ class DailyReportsSystem:
             
             elif choice == 2:  # Inventory Confirmation Report
                 self.inventory_confirmation_submenu()
+            
+            elif choice == 3:  # Process All Daily Reports (Sequential)
+                self.process_all_daily_reports()
+            
+            elif choice == 4:  # Process All Daily Reports (Concurrent)
+                os.system('cls' if os.name == 'nt' else 'clear')
+                print("⚡ CONCURRENT PROCESSING")
+                print("=" * 40)
+                print("🚧 This feature is not yet implemented.")
+                print("📋 It will run all daily reports concurrently for faster processing.")
+                print()
+                input("Press Enter to continue...")
 
 def main():
     """Entry point for daily reports system"""

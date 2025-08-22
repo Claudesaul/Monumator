@@ -54,7 +54,14 @@ async def run_inventory_confirmation_async(headless: bool = True) -> Dict[str, A
         # Calculate results
         elapsed_time = time.time() - start_time
         print(f"✅ Inventory confirmation completed in {elapsed_time:.1f} seconds")
-        return
+        
+        return {
+            'success': True,
+            'output_path': excel_file,
+            'elapsed_time': elapsed_time,
+            'total_assets': total_assets,
+            'routes_processed': len(route_data)
+        }
         
     except Exception as e:
         print(f"❌ Inventory confirmation failed: {str(e)}")

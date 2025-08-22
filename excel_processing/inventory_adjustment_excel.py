@@ -67,7 +67,7 @@ class InventoryExcelProcessor(ExcelProcessorBase):
         except Exception as e:
             print(f"⚠️ Could not clear sheet '{sheet_name}': {str(e)}")
     
-    def insert_dataframe_to_sheet(self, dataframe, sheet_name, start_row=2, start_col=1):
+    def insert_dataframe_to_sheet(self, dataframe, sheet_name, start_row=2, start_col=1, show_message=True):
         """
         Insert a pandas DataFrame into a worksheet
         
@@ -76,6 +76,7 @@ class InventoryExcelProcessor(ExcelProcessorBase):
             sheet_name (str): Name of the target sheet
             start_row (int): Starting row for data insertion
             start_col (int): Starting column for data insertion
+            show_message (bool): Whether to show insertion message
         """
         if not self.workbook:
             raise RuntimeError("Workbook not loaded. Call load_workbook() first.")
@@ -91,7 +92,8 @@ class InventoryExcelProcessor(ExcelProcessorBase):
             target_range = sheet.range((start_row, start_col)).resize(dataframe.shape[0], dataframe.shape[1])
             target_range.value = dataframe.values
             
-            print(f"📊 Inserted {len(dataframe)} rows into sheet '{sheet_name}'")
+            if show_message:
+                print(f"📊 Inserted {len(dataframe)} rows into sheet '{sheet_name}'")
         except Exception as e:
             print(f"❌ Failed to insert data into sheet '{sheet_name}': {str(e)}")
     
@@ -131,7 +133,6 @@ class InventoryExcelProcessor(ExcelProcessorBase):
                 column_range = sheet.range(range_address)
                 column_range.formula = base_formula
             
-            print(f"🔢 Applied formulas to {num_rows} rows in sheet '{sheet_name}'")
             
         except Exception as e:
             print(f"❌ Failed to copy formulas in sheet '{sheet_name}': {str(e)}")
@@ -144,11 +145,12 @@ class InventoryExcelProcessor(ExcelProcessorBase):
             iad_data (pandas.DataFrame): IAD data to insert
         """
         self.clear_sheet_data("Seed IAD")
-        self.insert_dataframe_to_sheet(iad_data, "Seed IAD")
+        self.insert_dataframe_to_sheet(iad_data, "Seed IAD", show_message=False)
         
         # Apply formulas if data exists
         if not iad_data.empty:
             self.copy_formulas_down("Seed IAD", len(iad_data))
+            print(f"📊 Processed {len(iad_data)} rows in sheet 'Seed IAD' (data + formulas)")
     
     def populate_items_sheet(self, items_data):
         """

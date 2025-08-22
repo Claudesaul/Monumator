@@ -103,6 +103,7 @@ def process_stockout_report(output_directory="downloads/daily"):
     Returns:
         dict: Results dictionary with success status and details
     """
+    print("🚀 Starting Daily Stockout Report processing...")
     start_time = time.time()
     
     try:
