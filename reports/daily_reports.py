@@ -15,9 +15,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import MenuNavigator utility
 from utils.menu_navigator import MenuNavigator
 
-from report_workflows.daily_stockout import process_stockout_report
-from report_workflows.inventory_adjustment import process_inventory_adjustment_summary
-from report_workflows.inventory_confirmation import process_inventory_confirmation_report
+from report_workflows.daily.daily_stockout import process_stockout_report
+from report_workflows.daily.inventory_adjustment import process_inventory_adjustment_summary
+from report_workflows.daily.inventory_confirmation import process_inventory_confirmation_report
 
 class DailyReportsSystem:
     """Daily reports menu system with sub-navigation"""
@@ -47,6 +47,7 @@ class DailyReportsSystem:
             
             elif choice == 0:  # Process Report
                 os.system('cls' if os.name == 'nt' else 'clear')
+                print("🚀 Processing Daily Stockout Report...")
                 try:
                     results = process_stockout_report()
                     if not results['success']:
@@ -111,6 +112,7 @@ class DailyReportsSystem:
         options = [
             "🌐 Run Web Scraper (Headless)",
             "👁️ Run Web Scraper (Visible)",
+            "📅 Check Date Logic",
             "🔙 Back"
         ]
         
@@ -119,7 +121,7 @@ class DailyReportsSystem:
         while True:
             choice = navigator.navigate()
             
-            if choice == -1 or choice == 2:  # Quit or Back
+            if choice == -1 or choice == 3:  # Quit or Back
                 return
             
             elif choice in [0, 1]:  # Run scraper
@@ -132,6 +134,28 @@ class DailyReportsSystem:
                     process_inventory_confirmation_report(headless=headless)
                 except Exception as e:
                     print(f"❌ Error: {str(e)}")
+                input("\nPress Enter to continue...")
+            
+            elif choice == 2:  # Check Date Logic
+                os.system('cls' if os.name == 'nt' else 'clear')
+                print("📅 DATE LOGIC CHECK")
+                print("=" * 40)
+                from datetime import datetime, timedelta
+                
+                today = datetime.now()
+                weekday = today.weekday()  # 0=Monday, 6=Sunday
+                
+                print(f"Today: {today.strftime('%A, %B %d, %Y')}")
+                
+                if weekday == 0:  # Monday
+                    target_date = today - timedelta(days=3)
+                    print("📋 Target Date: Friday data (3 days ago)")
+                else:
+                    target_date = today - timedelta(days=1)
+                    print("📋 Target Date: Previous business day")
+                
+                print(f"🗓️ Target Date: {target_date.strftime('%Y-%m-%d')}")
+                
                 input("\nPress Enter to continue...")
     
     
